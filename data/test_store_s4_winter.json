@@ -1,0 +1,19 @@
+{
+  "store_info": {"store_id": "STORE_004", "store_name": "阳光社区超市·北方店", "date": "2026-12-22"},
+  "weather": {"condition": "snow", "temperature": 2, "description": "冬至 2°C，寒冷"},
+  "community": {"type": "北方社区·家庭为主", "radius": "3km", "peak_hour": "17:00-19:00 下班", "office_buildings": 1, "school_ratio": "45%"},
+  "foot_traffic": {"estimated": 1560, "peak_periods": ["16:30-19:30"]},
+  "festival": {"name": "冬至", "description": "冬至节气，北方传统吃饺子"},
+  "commute": {"school_dismissal": "16:00", "office_offwork": "17:30"},
+  "inventory": [
+    {"product_id": "P301", "name": "猪肉馅", "category": "肉类", "stock": 60, "unit": "kg", "expiry_days": 2, "status": "临期", "stock_level": "normal", "price": 22.0, "cost": 15.0},
+    {"product_id": "P302", "name": "白菜", "category": "蔬菜", "stock": 70, "unit": "kg", "expiry_days": 1, "status": "临期", "stock_level": "normal", "price": 3.0, "cost": 1.5},
+    {"product_id": "P303", "name": "面粉", "category": "主食", "stock": 200, "unit": "袋", "expiry_days": 365, "status": "正常", "stock_level": "high", "price": 8.0, "cost": 5.0},
+    {"product_id": "P304", "name": "韭菜", "category": "蔬菜", "stock": 30, "unit": "kg", "expiry_days": 3, "status": "正常", "stock_level": "normal", "price": 8.0, "cost": 5.0},
+    {"product_id": "P305", "name": "鸡蛋", "category": "蛋类", "stock": 150, "unit": "盒", "expiry_days": 10, "status": "正常", "stock_level": "normal", "price": 12.0, "cost": 8.0},
+    {"product_id": "P306", "name": "速冻水饺", "category": "熟食", "stock": 400, "unit": "袋", "expiry_days": 90, "status": "正常", "stock_level": "high", "price": 15.0, "cost": 9.0},
+    {"product_id": "P307", "name": "陈醋", "category": "调料", "stock": 150, "unit": "瓶", "expiry_days": 365, "status": "正常", "stock_level": "normal", "price": 6.0, "cost": 3.5},
+    {"product_id": "P308", "name": "蒜", "category": "调料", "stock": 80, "unit": "kg", "expiry_days": 30, "status": "正常", "stock_level": "normal", "price": 10.0, "cost": 6.0}
+  ],
+  "historical_hot_dishes": ["手工水饺", "速冻水饺", "羊肉汤", "饺子皮"]
+}

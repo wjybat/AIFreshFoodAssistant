@@ -1,0 +1,9 @@
+product_id,name,category,stock,unit,expiry_days,status,stock_level,price,cost
+P001,青椒,蔬菜,50,kg,1,临期,normal,8.5,5.0
+P002,猪肉(丝),肉类,80,kg,3,正常,high,28.0,20.0
+P003,豆腐,豆制品,30,kg,2,临期,normal,5.0,3.0
+P004,熟食米饭,熟食,120,份,1,正常,high,6.0,3.5
+P005,鸡蛋,蛋类,200,盒,10,正常,normal,12.0,8.0
+P006,紫菜,干货,60,包,180,正常,normal,4.5,2.5
+P007,蒜,调料,100,kg,30,正常,normal,10.0,6.0
+P008,酱油,调料,80,瓶,365,正常,normal,8.0,5.0

@@ -1,0 +1,19 @@
+{
+  "store_info": {"store_id": "STORE_001", "store_name": "阳光社区超市·城东店", "date": "2026-07-09"},
+  "weather": {"condition": "rain", "temperature": 18, "description": "小雨 18°C，体感偏凉"},
+  "community": {"type": "家庭客群为主", "radius": "3km", "peak_hour": "18:00 下班高峰", "office_buildings": 2, "school_ratio": "35%"},
+  "foot_traffic": {"estimated": 850, "peak_periods": ["18:00-20:00"]},
+  "festival": {"name": null, "description": "无特殊节日"},
+  "commute": {"school_dismissal": "16:30", "office_offwork": "18:00"},
+  "inventory": [
+    {"product_id": "P001", "name": "青椒", "category": "蔬菜", "stock": 50, "unit": "kg", "expiry_days": 1, "status": "临期", "stock_level": "normal", "price": 8.5, "cost": 5.0},
+    {"product_id": "P002", "name": "猪肉(丝)", "category": "肉类", "stock": 80, "unit": "kg", "expiry_days": 3, "status": "正常", "stock_level": "high", "price": 28.0, "cost": 20.0},
+    {"product_id": "P003", "name": "豆腐", "category": "豆制品", "stock": 30, "unit": "kg", "expiry_days": 2, "status": "临期", "stock_level": "normal", "price": 5.0, "cost": 3.0},
+    {"product_id": "P004", "name": "熟食米饭", "category": "熟食", "stock": 120, "unit": "份", "expiry_days": 1, "status": "正常", "stock_level": "high", "price": 6.0, "cost": 3.5},
+    {"product_id": "P005", "name": "鸡蛋", "category": "蛋类", "stock": 200, "unit": "盒", "expiry_days": 10, "status": "正常", "stock_level": "normal", "price": 12.0, "cost": 8.0},
+    {"product_id": "P006", "name": "紫菜", "category": "干货", "stock": 60, "unit": "包", "expiry_days": 180, "status": "正常", "stock_level": "normal", "price": 4.5, "cost": 2.5},
+    {"product_id": "P007", "name": "蒜", "category": "调料", "stock": 100, "unit": "kg", "expiry_days": 30, "status": "正常", "stock_level": "normal", "price": 10.0, "cost": 6.0},
+    {"product_id": "P008", "name": "酱油", "category": "调料", "stock": 80, "unit": "瓶", "expiry_days": 365, "status": "正常", "stock_level": "normal", "price": 8.0, "cost": 5.0}
+  ],
+  "historical_hot_dishes": ["青椒肉丝", "麻婆豆腐", "番茄炒蛋"]
+}

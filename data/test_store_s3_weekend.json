@@ -1,0 +1,19 @@
+{
+  "store_info": {"store_id": "STORE_003", "store_name": "阳光社区超市·家庭店", "date": "2026-07-13"},
+  "weather": {"condition": "sunny", "temperature": 25, "description": "晴 25°C，宜聚餐"},
+  "community": {"type": "家庭聚餐为主", "radius": "3km", "peak_hour": "全天客流", "office_buildings": 0, "school_ratio": "40%"},
+  "foot_traffic": {"estimated": 1380, "peak_periods": ["10:00-12:00", "16:00-20:00"]},
+  "festival": {"name": null, "description": "周末，无特殊节日"},
+  "commute": {"school_dismissal": "周末无", "office_offwork": "周末无"},
+  "inventory": [
+    {"product_id": "P201", "name": "五花肉", "category": "肉类", "stock": 40, "unit": "kg", "expiry_days": 3, "status": "正常", "stock_level": "high", "price": 26.0, "cost": 18.0},
+    {"product_id": "P202", "name": "番茄", "category": "蔬菜", "stock": 55, "unit": "kg", "expiry_days": 2, "status": "临期", "stock_level": "normal", "price": 7.0, "cost": 4.0},
+    {"product_id": "P203", "name": "鸡蛋", "category": "蛋类", "stock": 180, "unit": "盒", "expiry_days": 10, "status": "正常", "stock_level": "normal", "price": 12.0, "cost": 8.0},
+    {"product_id": "P204", "name": "紫菜", "category": "干货", "stock": 50, "unit": "包", "expiry_days": 180, "status": "正常", "stock_level": "normal", "price": 4.5, "cost": 2.5},
+    {"product_id": "P205", "name": "大米", "category": "主食", "stock": 300, "unit": "袋", "expiry_days": 365, "status": "正常", "stock_level": "high", "price": 25.0, "cost": 18.0},
+    {"product_id": "P206", "name": "可乐", "category": "饮料", "stock": 200, "unit": "瓶", "expiry_days": 180, "status": "正常", "stock_level": "high", "price": 6.0, "cost": 3.5},
+    {"product_id": "P207", "name": "冰糖", "category": "调料", "stock": 60, "unit": "袋", "expiry_days": 365, "status": "正常", "stock_level": "normal", "price": 5.0, "cost": 3.0},
+    {"product_id": "P208", "name": "八角", "category": "调料", "stock": 80, "unit": "袋", "expiry_days": 365, "status": "正常", "stock_level": "normal", "price": 3.0, "cost": 1.5}
+  ],
+  "historical_hot_dishes": ["红烧肉", "番茄炒蛋", "糖醋排骨", "火锅"]
+}
