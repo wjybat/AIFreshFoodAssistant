@@ -145,6 +145,7 @@ class LLMEngine:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
+            extra_body={"enable_thinking": True},
             stream=True,
             temperature=0.7,
             max_tokens=4096,

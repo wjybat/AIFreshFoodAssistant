@@ -22,7 +22,7 @@ class Config:
 
     # ---- 服务器 ----
     HOST: str = os.getenv("SERVER_HOST", "0.0.0.0")
-    PORT: int = int(os.getenv("SERVER_PORT", "8000"))
+    PORT: int = int(os.getenv("SERVER_PORT", "8080"))
     # 对外可访问的基础 URL（二维码菜谱页地址前缀）
     SERVER_URL: str = os.getenv("SERVER_URL", f"http://localhost:{PORT}")
 
