@@ -93,6 +93,15 @@ async def store_dashboard():
     return FileResponse(str(page_path))
 
 
+@app.get("/recommendation-history")
+async def recommendation_history():
+    """历史推荐方案管理页"""
+    page_path = config.FRONTEND_DIR / "recommendation-history.html"
+    if not page_path.exists():
+        raise HTTPException(404, "前端文件未找到")
+    return FileResponse(str(page_path))
+
+
 @app.get("/api/health")
 async def health():
     """健康检查"""
@@ -181,12 +190,41 @@ async def generate(req: GenerateRequest):
     )
 
 
+@app.get("/api/recommendations/history")
+async def get_recommendation_history():
+    """列出按门店和业务日期保存的推荐方案。"""
+    recommendations = memory_store.list_recommendation_history()
+    return {
+        "recommendations": recommendations,
+        "total": len(recommendations),
+    }
+
+
+@app.delete("/api/recommendations/history")
+async def clear_recommendation_history():
+    """清空全部已保存推荐方案，不影响 Memory 历史样例。"""
+    deleted = memory_store.clear_recommendation_history()
+    return {
+        "message": f"已清空 {deleted} 条保存的推荐方案",
+        "deleted": deleted,
+    }
+
+
 @app.get("/api/recommendations/{plan_id}")
 async def get_recommendation(plan_id: str):
     """获取指定的待确认推荐方案。"""
     recommendation = memory_store.get_recommendation(plan_id)
     if recommendation is None:
         raise HTTPException(404, "推荐方案不存在或已被清理")
+    return recommendation
+
+
+@app.get("/api/recommendations")
+async def get_recommendation_for_date(store_id: str, date: str):
+    """获取指定门店业务日期对应的当前推荐方案。"""
+    recommendation = memory_store.get_recommendation_for_date(store_id, date)
+    if recommendation is None:
+        raise HTTPException(404, "该日期尚无生成方案")
     return recommendation
 
 

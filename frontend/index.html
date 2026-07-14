@@ -35,6 +35,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .status-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);padding:7px 14px;border-radius:10px;font-size:12px}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
 .status-dot.mock{background:var(--amber)}
+.history-btn{padding:9px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;color:#fff;background:rgba(255,255,255,.08);font-size:12.5px;font-weight:600;transition:.2s}
+.history-btn:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.5)}
 .gen-btn{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:10px 22px;border-radius:11px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(249,115,22,.45);transition:.2s}
 .gen-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(249,115,22,.55)}
 .gen-btn:disabled{opacity:.5;cursor:not-allowed}
@@ -243,6 +245,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <span class="think-icon" id="thinkIcon">🧠</span>
       <span id="thinkLabel">深度思考</span>
     </button>
+    <button class="history-btn" onclick="window.location.href='/recommendation-history'">历史方案</button>
     <button class="gen-btn" id="genBtn" disabled onclick="generate()"><span>⚡</span><span id="genBtnText">生成今日方案</span></button>
   </div>
 </div>
@@ -454,6 +457,7 @@ async function loadData(path){
 
     // 重置引擎区
     resetEngine();
+    await restoreRecommendationForDate(currentData);
   }catch(e){
     alert('加载数据失败: '+e.message);
   }
@@ -515,6 +519,65 @@ function resetEngine(){
   document.getElementById('pkgCard').style.display='none';
   document.getElementById('reachCard').style.display='none';
   document.getElementById('valueCard').style.display='none';
+}
+
+function renderStaticMarkdown(elId,rawText,fallbackText){
+  const el=document.getElementById(elId);
+  const content=rawText||fallbackText;
+  if(typeof marked!=='undefined'){
+    el.innerHTML='<div class="md-content">'+marked.parse(content)+'</div>';
+  }else{
+    el.textContent=content;
+  }
+  el.scrollTop=el.scrollHeight;
+}
+
+function recommendationStatus(plan){
+  if(plan.decision==='accepted') return '✅ 已接受执行';
+  if(plan.decision==='rejected') return '⛔ 已拒绝执行';
+  return '⏳ 待负责人确认';
+}
+
+function restoreRecommendation(plan){
+  currentPlanId=plan.plan_id;
+  currentResult=plan.result;
+  recipeUrls=plan.recipe_urls||{};
+
+  document.getElementById('engineIdle').style.display='none';
+  document.getElementById('statusLog').style.display='block';
+  document.getElementById('statusLog').innerHTML=`<div class="status-log" style="color:var(--brand-d)">📂 已恢复 ${plan.input_context?.store_info?.date||'当前日期'} 的历史推荐方案</div>`;
+  document.getElementById('dualPanel').style.display='flex';
+  document.getElementById('panelThinking').style.display=thinkingEnabled?'':'none';
+  document.getElementById('thinkingBadge').textContent=plan.raw_thinking?'历史推理':'无推理记录';
+  document.getElementById('outputBadge').textContent='历史方案';
+  if(thinkingEnabled){
+    renderStaticMarkdown('thinkingBody',plan.raw_thinking,'暂无保存的推理过程。');
+  }
+  renderStaticMarkdown(
+    'outputBody',
+    plan.raw_output,
+    `# ${plan.result?.scenario_tag||'历史推荐方案'}\n\n该日期的结构化推荐方案已恢复。`
+  );
+  document.getElementById('engineStatus').textContent=recommendationStatus(plan);
+  document.getElementById('genBtnText').textContent='重新生成';
+  renderResult({plan_id:plan.plan_id,result:plan.result});
+}
+
+async function restoreRecommendationForDate(data){
+  const storeInfo=data?.store_info||{};
+  const storeId=String(storeInfo.store_id||storeInfo.store_name||'default-store').trim();
+  const planDate=String(storeInfo.date||'').trim();
+  if(!planDate) return;
+
+  try{
+    const query=new URLSearchParams({store_id:storeId,date:planDate});
+    const response=await fetch(`/api/recommendations?${query}`);
+    if(response.status===404) return;
+    if(!response.ok) throw new Error('读取历史方案失败');
+    restoreRecommendation(await response.json());
+  }catch(error){
+    console.error('restoreRecommendationForDate error:',error);
+  }
 }
 
 /* ============================================================ 思考模式开关 ============================================================ */

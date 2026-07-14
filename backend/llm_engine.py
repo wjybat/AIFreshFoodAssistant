@@ -127,6 +127,8 @@ class LLMEngine:
                 input_context=input_data,
                 output=result,
                 recipe_urls=recipe_urls,
+                raw_thinking=raw_thinking,
+                raw_output=raw_output,
             )
 
             # ===== 完成 =====

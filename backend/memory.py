@@ -52,16 +52,88 @@ class MemoryStore:
             CREATE TABLE IF NOT EXISTS pending_recommendations (
                 plan_id        TEXT PRIMARY KEY,
                 created_at     TEXT NOT NULL,
+                store_id       TEXT,
+                plan_date      TEXT,
                 input_context  TEXT NOT NULL,
                 output         TEXT NOT NULL,
                 recipe_urls    TEXT NOT NULL,
+                raw_thinking   TEXT NOT NULL DEFAULT '',
+                raw_output     TEXT NOT NULL DEFAULT '',
                 decision       TEXT,
                 decided_at     TEXT,
                 memory_case_id INTEGER
             )
         """)
+        self._add_column_if_missing(conn, "pending_recommendations", "store_id", "TEXT")
+        self._add_column_if_missing(conn, "pending_recommendations", "plan_date", "TEXT")
+        self._add_column_if_missing(
+            conn,
+            "pending_recommendations",
+            "raw_thinking",
+            "TEXT NOT NULL DEFAULT ''",
+        )
+        self._add_column_if_missing(
+            conn,
+            "pending_recommendations",
+            "raw_output",
+            "TEXT NOT NULL DEFAULT ''",
+        )
+        self._backfill_pending_recommendation_keys(conn)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_pending_recommendation_date
+            ON pending_recommendations(store_id, plan_date)
+        """)
         conn.commit()
         conn.close()
+
+    @staticmethod
+    def _add_column_if_missing(
+        conn: sqlite3.Connection,
+        table_name: str,
+        column_name: str,
+        column_definition: str,
+    ):
+        columns = {
+            row[1] for row in conn.execute(f"PRAGMA table_info({table_name})")
+        }
+        if column_name not in columns:
+            conn.execute(
+                f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+            )
+
+    @staticmethod
+    def _backfill_pending_recommendation_keys(conn: sqlite3.Connection):
+        """从旧输入快照中恢复方案的门店和业务日期键。"""
+        rows = conn.execute(
+            """SELECT plan_id, input_context FROM pending_recommendations
+               WHERE COALESCE(store_id, '') = '' OR COALESCE(plan_date, '') = ''"""
+        ).fetchall()
+        for plan_id, serialized_input in rows:
+            try:
+                input_context = json.loads(serialized_input)
+                store_info = input_context.get("store_info", {})
+            except (TypeError, json.JSONDecodeError):
+                continue
+
+            if not isinstance(store_info, dict):
+                continue
+
+            store_id = str(
+                store_info.get("store_id")
+                or store_info.get("store_name")
+                or ""
+            ).strip()
+            plan_date = str(store_info.get("date") or "").strip()
+            if not store_id or not plan_date:
+                continue
+
+            conn.execute(
+                """UPDATE pending_recommendations
+                   SET store_id = CASE WHEN COALESCE(store_id, '') = '' THEN ? ELSE store_id END,
+                       plan_date = CASE WHEN COALESCE(plan_date, '') = '' THEN ? ELSE plan_date END
+                   WHERE plan_id = ?""",
+                (store_id, plan_date, plan_id),
+            )
 
     def store_case(
         self,
@@ -96,22 +168,66 @@ class MemoryStore:
         input_context: dict,
         output: dict,
         recipe_urls: dict,
+        raw_thinking: str = "",
+        raw_output: str = "",
     ) -> str:
-        """保存待门店负责人确认的方案，不写入 Memory 样例。"""
-        plan_id = uuid.uuid4().hex
+        """按门店和业务日期保存当前方案，不写入 Memory 样例。"""
+        store_info = input_context.get("store_info", {})
+        store_id = str(
+            store_info.get("store_id")
+            or store_info.get("store_name")
+            or "default-store"
+        ).strip()
+        plan_date = str(store_info.get("date") or "").strip()
+        if not plan_date:
+            raise ValueError("输入数据缺少 store_info.date，无法保存日期方案")
+
+        now = datetime.now().isoformat()
         conn = sqlite3.connect(self.db_path)
-        conn.execute(
-            """INSERT INTO pending_recommendations
-               (plan_id, created_at, input_context, output, recipe_urls)
-               VALUES (?, ?, ?, ?, ?)""",
-            (
-                plan_id,
-                datetime.now().isoformat(),
-                json.dumps(input_context, ensure_ascii=False),
-                json.dumps(output, ensure_ascii=False),
-                json.dumps(recipe_urls, ensure_ascii=False),
-            ),
-        )
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute(
+            """SELECT plan_id FROM pending_recommendations
+               WHERE store_id = ? AND plan_date = ?
+               ORDER BY created_at DESC LIMIT 1""",
+            (store_id, plan_date),
+        ).fetchone()
+        if existing:
+            plan_id = existing[0]
+            conn.execute(
+                """UPDATE pending_recommendations
+                   SET created_at = ?, input_context = ?, output = ?, recipe_urls = ?,
+                       raw_thinking = ?, raw_output = ?, decision = NULL,
+                       decided_at = NULL, memory_case_id = NULL
+                   WHERE plan_id = ?""",
+                (
+                    now,
+                    json.dumps(input_context, ensure_ascii=False),
+                    json.dumps(output, ensure_ascii=False),
+                    json.dumps(recipe_urls, ensure_ascii=False),
+                    raw_thinking,
+                    raw_output,
+                    plan_id,
+                ),
+            )
+        else:
+            plan_id = uuid.uuid4().hex
+            conn.execute(
+                """INSERT INTO pending_recommendations
+                   (plan_id, created_at, store_id, plan_date, input_context, output,
+                    recipe_urls, raw_thinking, raw_output)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    plan_id,
+                    now,
+                    store_id,
+                    plan_date,
+                    json.dumps(input_context, ensure_ascii=False),
+                    json.dumps(output, ensure_ascii=False),
+                    json.dumps(recipe_urls, ensure_ascii=False),
+                    raw_thinking,
+                    raw_output,
+                ),
+            )
         conn.commit()
         conn.close()
         return plan_id
@@ -120,23 +236,102 @@ class MemoryStore:
         """读取待确认方案及其当前决策状态。"""
         conn = sqlite3.connect(self.db_path)
         row = conn.execute(
-            """SELECT plan_id, created_at, input_context, output, recipe_urls,
-                      decision, decided_at, memory_case_id
+            """SELECT plan_id, created_at, store_id, plan_date, input_context, output,
+                      recipe_urls, raw_thinking, raw_output, decision, decided_at,
+                      memory_case_id
                FROM pending_recommendations WHERE plan_id = ?""",
             (plan_id,),
         ).fetchone()
         conn.close()
+        return self._recommendation_from_row(row)
+
+    def get_recommendation_for_date(
+        self,
+        store_id: str,
+        plan_date: str,
+    ) -> Optional[dict]:
+        """获取某门店在指定业务日期的当前推荐方案。"""
+        conn = sqlite3.connect(self.db_path)
+        row = conn.execute(
+            """SELECT plan_id, created_at, store_id, plan_date, input_context, output,
+                      recipe_urls, raw_thinking, raw_output, decision, decided_at,
+                      memory_case_id
+               FROM pending_recommendations
+               WHERE store_id = ? AND plan_date = ?
+               ORDER BY created_at DESC LIMIT 1""",
+            (store_id, plan_date),
+        ).fetchone()
+        conn.close()
+        return self._recommendation_from_row(row)
+
+    def list_recommendation_history(self) -> list:
+        """按门店和业务日期列出当前保存的推荐方案。"""
+        conn = sqlite3.connect(self.db_path)
+        rows = conn.execute(
+            """SELECT plan_id, created_at, store_id, plan_date, input_context,
+                      output, decision
+               FROM pending_recommendations
+               WHERE COALESCE(store_id, '') <> '' AND COALESCE(plan_date, '') <> ''
+               ORDER BY plan_date DESC, created_at DESC"""
+        ).fetchall()
+        conn.close()
+
+        history = []
+        seen_keys = set()
+        for row in rows:
+            store_id, plan_date = row[2], row[3]
+            key = (store_id, plan_date)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+
+            try:
+                input_context = json.loads(row[4])
+                output = json.loads(row[5])
+            except (TypeError, json.JSONDecodeError):
+                continue
+
+            store_info = input_context.get("store_info", {})
+            menus = output.get("menus", [])
+            history.append(
+                {
+                    "plan_id": row[0],
+                    "created_at": row[1],
+                    "store_id": store_id,
+                    "store_name": store_info.get("store_name") or store_id,
+                    "plan_date": plan_date,
+                    "scenario_tag": output.get("scenario_tag", "历史推荐方案"),
+                    "menu_count": len(menus) if isinstance(menus, list) else 0,
+                    "decision": row[6],
+                }
+            )
+        return history
+
+    def clear_recommendation_history(self) -> int:
+        """清空全部已保存的推荐方案，不影响 Memory 历史样例。"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.execute("DELETE FROM pending_recommendations")
+        conn.commit()
+        conn.close()
+        return cursor.rowcount
+
+    @staticmethod
+    def _recommendation_from_row(row) -> Optional[dict]:
         if row is None:
             return None
         return {
             "plan_id": row[0],
             "created_at": row[1],
-            "input_context": json.loads(row[2]),
-            "result": json.loads(row[3]),
-            "recipe_urls": json.loads(row[4]),
-            "decision": row[5],
-            "decided_at": row[6],
-            "memory_case_id": row[7],
+            "store_id": row[2],
+            "plan_date": row[3],
+            "input_context": json.loads(row[4]),
+            "result": json.loads(row[5]),
+            "recipe_urls": json.loads(row[6]),
+            "raw_thinking": row[7],
+            "raw_output": row[8],
+            "decision": row[9],
+            "decided_at": row[10],
+            "memory_case_id": row[11],
         }
 
     def decide_recommendation(self, plan_id: str, accepted: bool) -> Optional[dict]:

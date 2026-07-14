@@ -2,7 +2,7 @@
 
 > **一句话定位**：让超市不再被动清库存，用 LLM 把今天卖不动的商品，变成顾客今晚想买的一顿饭。
 
-基于 LLM + Harness 框架的 Agentic Workflow（生成式推荐），部署于云端，通过 Memory 持续自学习优化。
+基于 FastAPI、OpenAI 兼容 LLM 和 SQLite 的 Agentic Workflow（生成式推荐）。系统将当前方案按门店和业务日期保存，并在负责人决策后把结果作为 Memory 样例用于后续检索。
 
 ---
 
@@ -18,7 +18,12 @@ Idea1/
 │   ├── data_loader.py          # 数据加载（JSON/CSV 格式）
 │   └── main.py                 # FastAPI 服务（API端点 + 静态文件服务）
 ├── frontend/
-│   └── index.html              # 前端交互界面（数据可视化+流式思维链+结果展示+二维码）
+│   ├── index.html              # 运营驾驶舱（数据、流式生成、方案恢复）
+│   ├── dmall-member.html       # Dmall 会员 App 模拟推送页
+│   ├── store-dashboard.html    # 门店负责人决策大屏
+│   ├── recommendation-history.html # 历史推荐方案管理页
+│   ├── marked.min.js
+│   └── qrcode.min.js
 ├── data/                       # 测试数据
 │   ├── test_store_s1_rainy.json    # 场景1：雨天晚餐
 │   ├── test_store_s2_hot.json      # 场景2：高温清凉
@@ -31,7 +36,7 @@ Idea1/
 │   └── 产品规格文档.md          # v2.0 完整产品规格
 ├── run.py                      # 启动脚本
 ├── requirements.txt            # Python依赖
-├── .env.example                # 环境变量模板
+├── AGENTS.md                   # 后续开发 agent 的交接说明
 └── README.md                   # 本文件
 ```
 
@@ -55,11 +60,13 @@ pip install -r requirements.txt
 ### 2. 配置 LLM API
 
 ```bash
-# 复制环境变量模板
-cp .env.example .env
-
-# 编辑 .env，填入你的 LLM API Key
-# 支持 OpenAI / 智谱GLM / 任何 OpenAI 兼容接口
+# 在项目根目录创建 .env，填入 LLM API Key
+# 支持 OpenAI、智谱 GLM 及任何 OpenAI 兼容接口
+LLM_API_KEY=your-api-key
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4o
+SERVER_PORT=8000
+SERVER_URL=http://localhost:8000
 ```
 
 > **不配置 API Key 也能运行**：系统自动进入 Mock 模式，使用基于输入数据的模拟生成（可用于测试调试）。配置 Key 后自动切换为真实 LLM 调用。
@@ -76,21 +83,22 @@ python run.py --port 8080
 
 ### 4. 访问
 
-浏览器打开 `http://localhost:8080`
+浏览器打开 `http://localhost:8080`。
+
+> 二维码使用 `SERVER_URL` 生成菜谱链接。手机扫码时不能使用 `localhost`，请改为局域网可达 IP 或公网域名，例如 `http://192.168.1.20:8000`。
 
 ---
 
 ## 🎯 使用流程
 
-1. **选择数据**：在左侧面板选择测试数据文件（JSON/CSV）
-2. **查看数据**：数据可视化展示（库存/临期/天气/社区/客流）
-3. **生成方案**：点击「生成今日方案」→ LLM Agentic Workflow 启动
-4. **查看推理**：实时流式展示 LLM 思维链（Memory检索→Prompt组装→LLM推理）
-5. **查看结果**：推荐菜单卡片、场景包和价值预估；生成方案进入待负责人确认状态
-6. **查看触达**：从全渠道触达矩阵进入 Dmall 会员 App 模拟推送页或门店负责人决策大屏
-7. **确认执行**：负责人在决策大屏接受或拒绝方案；接受写入成功 Memory，拒绝写入失败 Memory，未决策方案不写入 Memory
-8. **查看菜谱**：点击菜单卡片 → 弹出完整菜谱（食材分量+步骤+贴士）
-9. **扫码分享**：菜谱弹窗底部二维码 → 手机扫码打开云端菜谱页
+1. **选择数据**：在左侧面板选择 JSON/CSV 数据文件，查看库存、临期、天气、社区和客流。
+2. **自动恢复**：系统以 `store_info.store_id`（无 ID 时使用门店名）和 `store_info.date` 查询；若该门店该日期已有方案，会自动恢复。
+3. **生成或重新生成**：点击「生成今日方案」或「重新生成」。页面通过 SSE 流式展示状态、推理和生成结果。
+4. **查看结果**：查看推荐菜单、场景包、价值预估和菜谱二维码；新方案先保存为待负责人确认状态。
+5. **查看触达**：从全渠道触达矩阵进入 Dmall 会员 App 模拟推送页或门店负责人决策大屏。
+6. **确认执行**：负责人接受或拒绝后，方案才会写入成功或失败的 Memory 样例；未决策方案不会写入 Memory。
+7. **管理历史**：点击顶栏「历史方案」，按门店和日期切换已保存方案。每次只显示一份所选日期内容；「清空全部」只删除保存方案，不删除 Memory 样例。
+8. **查看菜谱**：点击菜单卡片，弹出完整菜谱（食材分量、步骤、贴士）和二维码。
 
 ---
 
@@ -108,9 +116,10 @@ python run.py --port 8080
 ### LLM Agentic Workflow 流程
 
 ```
-输入数据 → Memory检索(相似历史样例) → Prompt组装(System+Skills+Few-Shot+User)
-    → LLM流式推理(生成式推荐) → 输出解析(思维链+JSON)
-    → 菜谱页面部署(云端) → 二维码生成 → Memory存储 → 多端下发
+输入数据 → 按门店/日期恢复历史方案（如存在）
+    → Memory 检索（相似已决策样例）→ Prompt 组装（System + Skills + Few-Shot + User）
+    → LLM 流式推理 → 输出解析（推理文本 + JSON）→ 菜谱页面部署与二维码生成
+    → 保存当前方案 → 多端下发 → 负责人接受/拒绝 → 写入 Memory 样例
 ```
 
 ---
@@ -125,6 +134,25 @@ python run.py --port 8080
 | test_store_s4_winter.json | 冬至节日 | 冬至 2°C | 猪肉馅(2天临期)/白菜(1天临期)/面粉(高) | 北方社区 |
 | sample_inventory.csv | CSV样例 | - | 青椒/猪肉/豆腐等8种商品 | - |
 
+JSON 至少需要 `store_info`、`weather`、`community` 和非空 `inventory`。其中 `store_info.date` 是方案保存和自动恢复的必填业务键，建议使用稳定格式，如 `2026-07-15`。
+
+CSV 只包含库存数据，系统会补充默认场景字段，默认门店名为“CSV导入门店”、日期为“今日”。连续使用默认 CSV 生成会覆盖同一门店同一天的方案；生产数据应补充真实门店 ID 和业务日期。
+
+---
+
+## 💾 方案与 Memory 存储
+
+`memory/memory.db` 中有两类互相独立的数据：
+
+| 表 | 作用 | 写入时机 |
+|------|------|----------|
+| `pending_recommendations` | 当前推荐方案、菜谱 URL、原始推理/输出和决策状态 | 每次生成；同一 `(store_id, plan_date)` 原地覆盖 |
+| `memory_cases` | LLM 相似检索使用的成功/失败业务样例 | 负责人接受或拒绝方案时 |
+
+重新生成同一门店、同一日期时，系统保留原 `plan_id`，更新方案内容，并重置 `decision`、`decided_at` 与 `memory_case_id`。此前已写入 `memory_cases` 的样例不会自动删除。
+
+启动时会尝试从旧方案的 `input_context.store_info` 回填门店与日期键。缺少日期的旧记录保留在数据库中，但不会出现在历史方案管理页，也不会被自动恢复。
+
 ---
 
 ## 🔧 API 端点
@@ -132,18 +160,25 @@ python run.py --port 8080
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/` | 前端主页 |
+| GET | `/recommendation-history` | 已保存推荐方案管理页 |
 | GET | `/api/health` | 健康检查（LLM状态/Memory数量） |
 | GET | `/api/data/files` | 列出可用数据文件 |
 | GET | `/api/data/{filename}` | 加载数据文件 |
 | POST | `/api/upload` | 上传数据文件 |
 | POST | `/api/generate` | SSE流式生成（LLM Agentic Workflow） |
+| GET | `/api/recommendations?store_id={id}&date={yyyy-mm-dd}` | 获取某门店某业务日期的当前方案；未命中返回 `404` |
+| GET | `/api/recommendations/history` | 列出所有已保存方案的摘要，每个门店日期一条 |
+| DELETE | `/api/recommendations/history` | 清空所有保存方案，不影响 `memory_cases` |
 | GET | `/dmall-member?plan_id={id}` | Dmall 会员 App 模拟推送页 |
 | GET | `/store-dashboard?plan_id={id}` | 门店负责人决策大屏 |
 | GET | `/api/recommendations/{plan_id}` | 读取待确认方案 |
 | POST | `/api/recommendations/{plan_id}/decision` | 接受或拒绝方案并写入 Memory |
 | GET | `/api/memory/cases` | 列出Memory历史样例 |
 | POST | `/api/memory/seed` | 注入种子样例 |
+| POST | `/api/memory/reset?reseed=true` | 重置 Memory 样例，可选重注入种子数据 |
 | GET | `/recipes/{filename}` | 已部署的菜谱页面 |
+
+`POST /api/generate` 的 SSE 事件包括 `status`、`thinking`、`token`、`done` 和 `error`。前端流式展示依赖这些事件名与载荷格式。
 
 ---
 
@@ -159,6 +194,20 @@ python run.py --port 8080
 | SERVER_URL | 对外可访问URL（二维码用） | http://localhost:8000 |
 
 > 部署到云端时，将 SERVER_URL 改为实际域名（如 `https://your-domain.com`），二维码将指向云端菜谱页。
+
+---
+
+## ✅ 修改后验证
+
+项目目前没有独立测试套件。修改后至少执行：
+
+```powershell
+& '你的虚拟环境/python.exe' -m compileall backend
+Invoke-RestMethod http://127.0.0.1:8000/api/health
+Invoke-RestMethod http://127.0.0.1:8000/api/recommendations/history
+```
+
+若改动涉及方案保存或 UI，浏览器中还应验证：数据切换后的自动恢复、同日重新生成覆盖、历史方案页面切换、负责人决策，以及二维码外部可达性。后续开发约束见 [AGENTS.md](AGENTS.md)。
 
 ---
 
