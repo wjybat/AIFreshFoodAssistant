@@ -242,10 +242,10 @@ class LLMEngine:
         if enable_thinking:
             for char in thinking_part:
                 yield ("thinking", char)
-                await asyncio.sleep(0.012)
+                await asyncio.sleep(0.003)
         for char in output_part:
             yield ("token", char)
-            await asyncio.sleep(0.012)
+            await asyncio.sleep(0.003)
 
     def _suggest_dishes_mock(self, expiring: list, high_stock: list) -> list:
         """基于临期/高库存商品推测菜谱（Mock 模式用）"""
