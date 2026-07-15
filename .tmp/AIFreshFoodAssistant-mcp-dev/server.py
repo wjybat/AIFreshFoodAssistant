@@ -30,9 +30,9 @@ def create_server(
         db_path or os.environ.get("FRESH_FOOD_MCP_DB", DEFAULT_DB_PATH)
     )
     server = FastMCP(
-        "AIFreshFoodAssistant Development Data",
+        "AIFreshFoodAssistant Store Operational Data",
         instructions=(
-            "Read-only DEVELOPMENT-FAKE fresh-food data. Never represent these values as production data. "
+            "Read-only store operational data. "
             "For recommendation work, inspect store metadata first, then retrieve inventory, sales history, "
             "and current prices with separate tool calls so each reasoning step has explicit evidence."
         ),
@@ -43,7 +43,7 @@ def create_server(
 
     @server.tool()
     def get_dataset_info() -> DatasetInfoResponse:
-        """Describe dataset coverage, store dates, row counts, and its development-fake status."""
+        """Describe dataset coverage, store dates, row counts, and its read-only status."""
         return repository.get_dataset_info()
 
     @server.tool()
@@ -107,7 +107,7 @@ def main() -> None:
         "--db",
         type=Path,
         default=Path(os.environ.get("FRESH_FOOD_MCP_DB", DEFAULT_DB_PATH)),
-        help="Path to the SQLite development database.",
+        help="Path to the SQLite operational database.",
     )
     arguments = parser.parse_args()
 

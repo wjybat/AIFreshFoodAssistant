@@ -12,7 +12,7 @@ RUN addgroup --system --gid 10001 app \
 
 # 先复制依赖文件，利用 Docker 缓存
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
 # 复制项目文件
 COPY --chown=app:app backend/ ./backend/

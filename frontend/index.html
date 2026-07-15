@@ -78,6 +78,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .inv-row .meta{font-size:11px;color:var(--ink3)}
 .inv-bar{height:4px;background:var(--line2);border-radius:3px;margin-top:2px;overflow:hidden}
 .inv-bar i{display:block;height:100%;border-radius:3px}
+.inventory-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line2)}
+.inventory-pager button{width:28px;height:26px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--brand-d);font-size:18px;line-height:1}
+.inventory-pager button:hover:not(:disabled){background:var(--brand-l);border-color:var(--brand)}
+.inventory-pager button:disabled{color:var(--ink3);cursor:not-allowed}
+.inventory-pager span{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
 .community-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .community-stat{background:var(--line2);border-radius:9px;padding:9px 10px}
 .community-stat .v{font-size:17px;font-weight:700;color:var(--brand-d)}
@@ -447,6 +452,9 @@ let recipeUrls={};
 let currentPlanId=null;
 let currentRawThinking='';
 let generating=false;
+let currentDisplayData=null;
+let inventoryPage=0;
+const inventoryPageSize=10;
 const agentFlowNodes=new Map();
 let agentFlowColumns=[];
 let agentFlowFocusFrame=null;
@@ -619,7 +627,7 @@ async function loadDataFiles(){
       return;
     }
     body.innerHTML='<div class="data-select">'+d.files.map(f=>
-      `<button class="data-file-btn" data-path="${escapeHtml(f.path)}" onclick="loadData(this.dataset.path,event)"><span class="f-icon">${f.type==='json'?'📋':'📊'}</span><span class="f-name">${escapeHtml(f.filename)}</span><span class="f-type">${escapeHtml(String(f.type||'').toUpperCase())}</span></button>`
+      `<button class="data-file-btn" data-path="${escapeHtml(f.path)}" onclick="loadData(this.dataset.path,event)"><span class="f-icon">📍</span><span class="f-name">${escapeHtml(f.label||f.filename)}</span></button>`
     ).join('')+'</div>';
   }catch(e){
     console.error('loadDataFiles error:',e);
@@ -634,8 +642,10 @@ async function loadData(path,evt){
     const r=await fetch(`/api/data/${encodeURIComponent(path)}`);
     const d=await r.json();
     currentData=d.data;
+    currentDisplayData=d.display;
+    inventoryPage=0;
     renderDataViz(d.display);
-    document.getElementById('dataFileLabel').textContent=path;
+    document.getElementById('dataFileLabel').textContent=dataLabel(currentData);
     document.getElementById('genBtn').disabled=false;
 
     // 重置引擎区
@@ -646,7 +656,20 @@ async function loadData(path,evt){
   }
 }
 
+function dataLabel(data){
+  const storeInfo=data?.store_info||{};
+  return [storeInfo.store_name,storeInfo.date].filter(Boolean).join(' · ')||'已加载';
+}
+
+function showInventoryPage(page){
+  const inventory=Array.isArray(currentDisplayData?.inventory)?currentDisplayData.inventory:[];
+  const totalPages=Math.max(1,Math.ceil(inventory.length/inventoryPageSize));
+  inventoryPage=Math.min(Math.max(page,0),totalPages-1);
+  renderDataViz(currentDisplayData||{});
+}
+
 function renderDataViz(d){
+  currentDisplayData=d;
   document.getElementById('dataVizCard').style.display='block';
   let html='';
   const inventory=Array.isArray(d.inventory)?d.inventory:[];
@@ -678,13 +701,20 @@ function renderDataViz(d){
   }
 
   // 库存
+  const totalPages=Math.max(1,Math.ceil(inventory.length/inventoryPageSize));
+  inventoryPage=Math.min(inventoryPage,totalPages-1);
+  const pageStart=inventoryPage*inventoryPageSize;
+  const displayedInventory=inventory.slice(pageStart,pageStart+inventoryPageSize);
   html+=`<div class="data-section"><div class="data-label"><span>📦 库存与临期预警</span><span class="tag ${sm.expiring_count>0?'tag-danger':'tag-ok'}">${escapeHtml(sm.expiring_count||0)}项临期</span></div>`;
-  inventory.forEach(it=>{
+  displayedInventory.forEach(it=>{
     const color=it.status==='临期'?'var(--red)':it.stock_level==='high'?'var(--amber)':'var(--green)';
     const inventoryState=it.status==='临期'?`${it.expiry_days}天临期`:it.stock_level==='high'?'库存偏高':'正常';
     const priceText=it.price!==undefined&&it.price!==null&&it.price!==''?` · 售价 ${moneyPrefix}${it.price}`:'';
     html+=`<div class="inv-row"><span class="dot" style="background:${color}"></span><span class="nm">${escapeHtml(it.name)}</span><span class="meta">${escapeHtml(it.stock)}${escapeHtml(it.unit||'')} · ${escapeHtml(inventoryState)}${escapeHtml(priceText)}</span></div><div class="inv-bar"><i style="width:${it.stock_level==='high'?85:it.status==='临期'?60:40}%;background:${color}"></i></div>`;
   });
+  if(inventory.length>inventoryPageSize){
+    html+=`<div class="inventory-pager"><button type="button" onclick="showInventoryPage(${inventoryPage-1})" aria-label="上一页库存" ${inventoryPage===0?'disabled':''}>&lsaquo;</button><span>${pageStart+1}-${Math.min(pageStart+inventoryPageSize,inventory.length)} / ${inventory.length}</span><button type="button" onclick="showInventoryPage(${inventoryPage+1})" aria-label="下一页库存" ${inventoryPage===totalPages-1?'disabled':''}>&rsaquo;</button></div>`;
+  }
   html+='</div>';
 
   // 天气
@@ -1192,6 +1222,7 @@ async function generate(){
             recipeUrls=result.recipe_urls||{};
             currentPlanId=result.plan_id||null;
             if(result.input_context){
+              inventoryPage=0;
               renderDataViz(result.input_context);
             }
             currentRawThinking=thinkingText;

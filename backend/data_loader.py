@@ -126,10 +126,21 @@ def list_data_files(data_dir: Path) -> list:
         return files
     for f in sorted(data_dir.iterdir()):
         if f.suffix in (".json", ".csv"):
+            label = f.stem
+            if f.suffix == ".json":
+                try:
+                    data = load_json(f)
+                    store_info = data.get("store_info", {})
+                    store_name = str(store_info.get("store_name", "")).strip()
+                    plan_date = str(store_info.get("date", "")).strip()
+                    label = " · ".join(value for value in (store_name, plan_date) if value)
+                except (OSError, ValueError, json.JSONDecodeError):
+                    pass
             files.append({
                 "filename": f.name,
                 "path": str(f.name),
                 "type": f.suffix[1:],
                 "size": f.stat().st_size,
+                "label": label,
             })
     return files
