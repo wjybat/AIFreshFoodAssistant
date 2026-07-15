@@ -89,29 +89,87 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .engine-idle .big{font-size:50px;margin-bottom:12px;opacity:.4}
 .engine-idle p{font-size:13px}
 .engine-idle .hint{font-size:11.5px;margin-top:8px}
-.status-log{font-size:12px;color:var(--brand-d);padding:6px 0;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:6px}
-.status-log:last-child{border-bottom:none}
-.status-log .spinner{width:12px;height:12px;border:2px solid var(--brand-l);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}
-.agent-trace{margin:10px 0 0;border:1px solid #c7d2fe;border-radius:12px;background:#f8faff;overflow:hidden}
-.agent-trace-head{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#eef2ff;cursor:pointer;user-select:none}
-.agent-trace-head h4{font-size:12.5px;color:#4338ca;font-weight:700}
-.agent-trace-head .badge{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:5px;background:#c7d2fe;color:#3730a3;font-weight:700}
+.agent-trace{position:relative;isolation:isolate;margin:12px 0 0;border:1px solid #c7d2fe;border-radius:16px;background:#f8faff;overflow:hidden;box-shadow:0 8px 28px rgba(79,70,229,.08)}
+.agent-trace::before{content:'';position:absolute;z-index:-1;width:260px;height:260px;right:-100px;top:-160px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.15),transparent 70%);pointer-events:none}
+.agent-trace-head{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;background:linear-gradient(110deg,rgba(238,242,255,.98),rgba(240,253,250,.92));cursor:pointer;user-select:none;text-align:left}
+.agent-trace-head .head-icon{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#14b8a6);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 5px 12px rgba(99,102,241,.22);font-size:14px}
+.agent-trace-head .head-copy{min-width:0}
+.agent-trace-head h4{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#3730a3;font-weight:800}
+.agent-trace-head .head-sub{font-size:10px;color:#7c83a4;margin-top:1px}
+.agent-trace-live{display:inline-flex;align-items:center;gap:4px;font-size:9px;color:#0f766e;background:rgba(204,251,241,.82);padding:1px 6px;border-radius:999px;font-weight:700}
+.agent-trace-live b{font-weight:800}
+.agent-trace-live i{width:5px;height:5px;border-radius:50%;background:#14b8a6;box-shadow:0 0 0 4px rgba(20,184,166,.12);animation:tracePulse 1.4s ease-in-out infinite}
+.agent-trace[data-state="completed"] .agent-trace-live i{background:#22c55e;animation:none}
+.agent-trace[data-state="failed"] .agent-trace-live{color:#b91c1c;background:#fee2e2}
+.agent-trace[data-state="failed"] .agent-trace-live i{background:#ef4444;animation:none;box-shadow:none}
+.agent-trace-head .badge{margin-left:auto;flex-shrink:0;font-size:10px;padding:3px 9px;border-radius:999px;background:#e0e7ff;color:#4338ca;font-weight:800;border:1px solid rgba(99,102,241,.14)}
+.agent-trace-head .badge.running{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+.agent-trace-head .badge.completed{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.agent-trace-head .badge.failed{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
 .agent-trace-head .arrow{font-size:11px;color:#6366f1;transition:.2s}
 .agent-trace.collapsed .arrow{transform:rotate(-90deg)}
-.agent-trace.collapsed .agent-trace-list{display:none}
-.agent-trace-list{padding:6px 12px;max-height:250px;overflow:auto}
-.agent-event{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid #e0e7ff;color:#334155}
-.agent-event:last-child{border-bottom:none}
-.agent-event.tool{margin-left:18px}
-.agent-event .state-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:800}
-.agent-event.running .state-icon{animation:pulse 1.2s ease-in-out infinite}
-.agent-event.completed .state-icon{background:#dcfce7;color:#15803d}
-.agent-event.failed .state-icon{background:#fee2e2;color:#dc2626}
-.agent-event .agent-label{font-size:12px;font-weight:700;color:#312e81}
-.agent-event .agent-detail{font-size:11px;color:#64748b;margin-top:2px;overflow-wrap:anywhere}
-.agent-event .agent-meta{font-size:10px;color:#94a3b8;margin-top:3px;overflow-wrap:anywhere}
+.agent-trace.collapsed .agent-flow-wrap{display:none}
+.agent-trace-progress{height:4px;background:rgba(224,231,255,.75);overflow:hidden}
+.agent-trace-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#6366f1,#06b6d4,#22c55e);background-size:200% 100%;transition:width .45s ease;animation:progressGlow 1.8s linear infinite}
+.agent-trace-progress.failed i{background:linear-gradient(90deg,#6366f1,#ef4444)}
+/* 动态流程图：横向阶段、流动连线、自动并行分组 */
+.agent-flow-wrap{position:relative;overflow:hidden;background-color:#f8faff;background-image:linear-gradient(rgba(99,102,241,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,.055) 1px,transparent 1px);background-size:22px 22px}
+.agent-flow-wrap::before,.agent-flow-wrap::after{content:'';position:absolute;z-index:3;top:0;bottom:0;width:28px;pointer-events:none}
+.agent-flow-wrap::before{left:0;background:linear-gradient(90deg,#f8faff,transparent)}
+.agent-flow-wrap::after{right:0;background:linear-gradient(-90deg,#f8faff,transparent)}
+.agent-flow{position:relative;display:flex;align-items:center;min-height:182px;padding:24px 22px;overflow-x:auto;scroll-behavior:smooth}
+.agent-flow::-webkit-scrollbar{height:6px}
+.flow-col{position:relative;z-index:1;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.flow-col.parallel{border:1.5px dashed #a5b4fc;border-radius:16px;padding:18px 10px 10px;background:rgba(238,242,255,.72);box-shadow:inset 0 0 24px rgba(99,102,241,.04)}
+.flow-col.parallel::before{content:'并行工具调用';position:absolute;top:-9px;left:14px;background:#eef2ff;border:1px solid #a5b4fc;color:#4f46e5;font-size:9px;font-weight:800;padding:2px 8px;border-radius:999px;line-height:1.5;letter-spacing:.3px}
+.flow-node{position:relative;width:178px;min-height:108px;background:rgba(255,255,255,.96);border:1.5px solid #dbe3ff;border-radius:14px;padding:11px 12px 10px 14px;box-shadow:0 5px 14px rgba(49,46,129,.07);transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease,background .3s ease;animation:flowNodeIn .42s cubic-bezier(.2,.8,.2,1) both;overflow:hidden}
+.flow-node::before{content:'';position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:#c7d2fe;transition:.3s}
+.flow-node::after{content:'';position:absolute;inset:0;transform:translateX(-130%);background:linear-gradient(105deg,transparent 34%,rgba(255,255,255,.74) 48%,transparent 62%);pointer-events:none}
+.flow-node .fn-top{display:flex;align-items:center;gap:6px}
+.flow-node .fn-state{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:900;background:#eef2ff;color:#4338ca;flex-shrink:0;position:relative;border:1px solid #c7d2fe}
+.flow-node .fn-kind{margin-left:auto;font-size:8.5px;padding:2px 7px;border-radius:999px;background:#eef2ff;color:#6366f1;font-weight:800;letter-spacing:.35px}
+.flow-node .fn-label{font-size:12px;font-weight:800;color:#312e81;line-height:1.4;margin-top:7px}
+.flow-node .fn-detail{font-size:10.5px;color:#64748b;margin-top:4px;line-height:1.48;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.flow-node .fn-meta{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.flow-node .fn-meta:empty{display:none}
+.flow-node .fn-meta span{font-size:9px;color:#64748b;background:#f1f5f9;padding:2px 6px;border-radius:5px;font-family:Consolas,monospace;overflow-wrap:anywhere}
+.flow-node.stage{border-color:#bae6fd;background:linear-gradient(145deg,#fff,#f0f9ff)}
+.flow-node.stage::before{background:#0ea5e9}
+.flow-node.stage .fn-state{background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
+.flow-node.stage .fn-kind{background:#e0f2fe;color:#0369a1}
+.flow-node.running{transform:translateY(-3px);border-color:#818cf8;background:#fff;box-shadow:0 0 0 4px rgba(99,102,241,.1),0 12px 24px rgba(79,70,229,.16)}
+.flow-node.running::before{background:linear-gradient(#6366f1,#06b6d4);box-shadow:0 0 10px rgba(99,102,241,.5)}
+.flow-node.running::after{animation:nodeScan 1.8s ease-in-out infinite}
+.flow-node.running .fn-state{color:transparent;border-color:#a5b4fc;background:#eef2ff}
+.flow-node.running .fn-state::before{content:'';position:absolute;inset:-4px;border:1px solid rgba(99,102,241,.35);border-radius:50%;animation:tracePulse 1.25s ease-out infinite}
+.flow-node.running .fn-state::after{content:'';position:absolute;inset:4px;border:2px solid #6366f1;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+.flow-node.completed{border-color:#86efac;background:linear-gradient(145deg,#fff,#f7fff9)}
+.flow-node.completed::before{background:#22c55e}
+.flow-node.completed .fn-state{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.flow-node.completed .fn-kind{background:#f0fdf4;color:#16a34a}
+.flow-node.failed{border-color:#fca5a5;background:#fff8f8}
+.flow-node.failed::before{background:#ef4444}
+.flow-node.failed .fn-state{background:#fee2e2;color:#dc2626;border-color:#fecaca}
+.flow-node.failed .fn-label{color:#991b1b}
+.flow-node.failed .fn-kind{background:#fef2f2;color:#dc2626}
+.flow-link{flex-shrink:0;width:48px;height:26px;position:relative;align-self:center}
+.flow-link::before{content:'';position:absolute;left:2px;right:9px;top:50%;height:2px;margin-top:-1px;background:#c7d2fe;transition:.3s}
+.flow-link::after{content:'';position:absolute;right:1px;top:50%;transform:translateY(-50%);border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid #c7d2fe;transition:.3s}
+.flow-link .flow-particle{display:none;position:absolute;z-index:2;top:50%;left:0;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.13),0 0 10px #6366f1}
+.flow-link.flowing::before{background:repeating-linear-gradient(90deg,#6366f1 0 6px,#c7d2fe 6px 12px);background-size:24px 100%;animation:dashFlow .6s linear infinite}
+.flow-link.flowing::after{border-left-color:#6366f1}
+.flow-link.flowing .flow-particle{display:block;animation:linkParticle 1.15s ease-in-out infinite}
+.flow-link.done::before{background:#4ade80}
+.flow-link.done::after{border-left-color:#4ade80}
+.flow-link.failed::before{background:#fca5a5}
+.flow-link.failed::after{border-left-color:#fca5a5}
+@keyframes dashFlow{to{background-position:24px 0}}
+@keyframes linkParticle{0%{left:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{left:calc(100% - 9px);opacity:0}}
+@keyframes nodeScan{0%,30%{transform:translateX(-130%)}70%,100%{transform:translateX(130%)}}
+@keyframes tracePulse{0%,100%{transform:scale(.88);opacity:.55}50%{transform:scale(1.18);opacity:1}}
+@keyframes progressGlow{to{background-position:-200% 0}}
+@keyframes flowNodeIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{50%{opacity:.45;transform:scale(.86)}}
 .thinking-chain{background:#0f172a;color:#cbd5e1;font-family:"Cascadia Code","Fira Code",Consolas,monospace;font-size:12.5px;line-height:1.7;padding:16px;border-radius:10px;max-height:400px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;margin-top:10px}
 .thinking-chain .cursor{display:inline-block;width:8px;height:14px;background:var(--brand);animation:blink 1s steps(1) infinite;vertical-align:middle}
 @keyframes blink{50%{opacity:0}}
@@ -148,8 +206,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .reach-link .nav-arrow{font-size:18px;color:var(--ink3)}
 
 /* ===== 价值预估 ===== */
-.value-card{margin-top:16px}
-.value-grid{display:grid;grid-template-columns:repeat(4,1fr) 1.3fr;gap:14px;padding:16px}
+.value-card{margin-top:0}
+.value-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}
+.value-card .kpi{padding:12px}
+.value-card .kpi .k-val{font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+.value-card .compare-chart{grid-column:1/-1;padding:12px}
 .kpi{background:var(--line2);border-radius:12px;padding:14px}
 .kpi .k-label{font-size:11.5px;color:var(--ink2)}
 .kpi .k-val{font-size:24px;font-weight:800;margin-top:6px;line-height:1}
@@ -246,8 +307,23 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .panel-output-body .streaming-content{color:#e2e8f0}
 
 /* ===== 响应式 ===== */
-@media(max-width:1280px){.grid{grid-template-columns:1fr}.value-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.agent-event.tool{margin-left:8px}.agent-trace-list{padding:6px 9px}.value-grid{grid-template-columns:1fr}}
+@media(max-width:1280px){.grid{grid-template-columns:1fr}.value-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+  .agent-trace-head{align-items:flex-start;padding:11px 12px}.agent-trace-head .head-icon{width:28px;height:28px}.agent-trace-head .head-sub{display:none}.agent-trace-head .badge{margin-top:3px}.agent-trace-live{display:none}
+  .agent-flow{min-height:0;max-height:520px;flex-direction:column;align-items:stretch;padding:22px 14px;overflow-x:hidden;overflow-y:auto}
+  .flow-col{width:100%}.flow-col.parallel{width:100%;padding:18px 9px 9px}.flow-node{width:100%;min-height:0}
+  .flow-link{width:24px;height:38px;align-self:center}
+  .flow-link::before{left:50%;right:auto;top:2px;bottom:9px;width:2px;height:auto;margin:0 0 0 -1px}
+  .flow-link::after{right:auto;left:50%;top:auto;bottom:1px;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #c7d2fe;border-bottom:0}
+  .flow-link.flowing::before{background:repeating-linear-gradient(180deg,#6366f1 0 6px,#c7d2fe 6px 12px);background-size:100% 24px;animation:dashFlowY .6s linear infinite}
+  .flow-link.flowing::after{border-left-color:transparent;border-top-color:#6366f1}
+  .flow-link.done::after{border-left-color:transparent;border-top-color:#4ade80}.flow-link.failed::after{border-left-color:transparent;border-top-color:#fca5a5}
+  .flow-link .flow-particle{top:0;left:50%;margin:-1px 0 0 -3.5px}.flow-link.flowing .flow-particle{animation-name:linkParticleY}
+  .value-grid{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.agent-trace *{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+@keyframes dashFlowY{to{background-position:0 24px}}
+@keyframes linkParticleY{0%{top:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{top:calc(100% - 9px);opacity:0}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .fade-up{animation:fadeUp .5s ease both}
 </style>
@@ -305,12 +381,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
           <p>引擎就绪 · 选择左侧数据后点击「生成今日方案」</p>
           <p class="hint">LLM 将根据 Memory 历史样例 + Skills 领域知识 + 当日数据推理生成菜单候选</p>
         </div>
-        <div id="statusLog" style="display:none"></div>
-        <div class="agent-trace" id="agentTrace" style="display:none">
-          <div class="agent-trace-head" onclick="togglePanel('agentTrace')">
-            <span>🧭</span><h4>多步 Agent 执行轨迹</h4><span class="badge" id="agentTraceBadge">等待执行</span><span class="arrow">▼</span>
-          </div>
-          <div class="agent-trace-list" id="agentTraceList"></div>
+        <div class="agent-trace" id="agentTrace" data-state="idle" style="display:none">
+          <button type="button" class="agent-trace-head" onclick="togglePanel('agentTrace')" aria-label="展开或收起完整 Agentic Workflow">
+            <span class="head-icon">⌁</span>
+            <div class="head-copy"><h4>完整 Agentic Workflow <span class="agent-trace-live"><i></i><b id="agentTraceLiveText">等待</b></span></h4><div class="head-sub">数据准备、Memory、Prompt、LLM 与方案部署全流程</div></div>
+            <span class="badge" id="agentTraceBadge">等待执行</span><span class="arrow">▼</span>
+          </button>
+          <div class="agent-trace-progress"><i id="agentTraceProgress"></i></div>
+          <div class="agent-flow-wrap"><div class="agent-flow" id="agentFlow" role="list" aria-live="polite" aria-label="完整 Agentic Workflow"></div></div>
+        </div>
+        <div class="menu-out" id="menuOut">
+          <div class="card-head" style="border:none;padding:6px 0 10px"><div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📋</div><h3>今日推荐菜单候选</h3><span class="sub" id="menuMeta"></span></div>
+          <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="dual-panel" id="dualPanel" style="display:none">
           <div class="panel-thinking" id="panelThinking">
@@ -326,15 +408,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
             <div class="panel-output-body" id="outputBody"></div>
           </div>
         </div>
-        <div class="menu-out" id="menuOut">
-          <div class="card-head" style="border:none;padding:6px 0 10px"><div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📋</div><h3>今日推荐菜单候选</h3><span class="sub" id="menuMeta"></span></div>
-          <div class="menu-grid" id="menuGrid"></div>
-        </div>
       </div>
     </div>
   </div>
 
-  <!-- 右列：场景包+触达 -->
+  <!-- 右列：场景包+触达+价值 -->
   <div class="col">
     <div class="card" id="pkgCard" style="display:none">
       <div class="card-head"><div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📦</div><h3>场景包 · 今日主推</h3></div>
@@ -344,14 +422,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="card-head"><div class="h-icon" style="background:var(--purple-l);color:var(--purple)">📡</div><h3>全渠道触达矩阵</h3><span class="sub">待负责人确认</span></div>
       <div class="reach-nav" id="reachNav"></div>
     </div>
+    <div class="card value-card" id="valueCard" style="display:none">
+      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📈</div><h3>价值预估（理想化展示数据）</h3></div>
+      <div class="value-grid" id="valueGrid"></div>
+    </div>
   </div>
 
-</div>
-
-<!-- 价值预估 -->
-<div class="card value-card" id="valueCard" style="display:none">
-  <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📈</div><h3>价值预估（理想化展示数据）</h3></div>
-  <div class="value-grid" id="valueGrid"></div>
 </div>
 
 </div>
@@ -371,7 +447,11 @@ let recipeUrls={};
 let currentPlanId=null;
 let currentRawThinking='';
 let generating=false;
-const agentEventNodes=new Map();
+const agentFlowNodes=new Map();
+let agentFlowColumns=[];
+let agentFlowFocusFrame=null;
+let workflowActiveStageId=null;
+let workflowFallbackIndex=0;
 
 function escapeHtml(value){
   return String(value??'').replace(/[&<>"']/g,char=>({
@@ -641,8 +721,6 @@ function resetEngine(){
   currentPlanId=null;
   currentRawThinking='';
   document.getElementById('engineIdle').style.display='block';
-  document.getElementById('statusLog').style.display='none';
-  document.getElementById('statusLog').innerHTML='';
   resetAgentTrace();
   document.getElementById('dualPanel').style.display='none';
   document.getElementById('thinkingBody').innerHTML='';
@@ -677,14 +755,9 @@ function restoreRecommendation(plan){
   }
 
   document.getElementById('engineIdle').style.display='none';
-  document.getElementById('statusLog').style.display='block';
-  document.getElementById('statusLog').replaceChildren();
-  appendStatusRow(`已恢复 ${plan.input_context?.store_info?.date||'当前日期'} 的历史推荐方案`,{tone:'brand',icon:'📂'});
   resetAgentTrace();
   const savedTrace=plan.input_context?.operational_data?.agent_trace||[];
-  if(savedTrace.length){
-    savedTrace.forEach(renderAgentEvent);
-  }
+  renderRestoredWorkflow(plan,savedTrace);
   document.getElementById('dualPanel').style.display='flex';
   document.getElementById('panelThinking').style.display=thinkingEnabled?'':'none';
   document.getElementById('thinkingBadge').textContent=plan.raw_thinking?'历史推理':'无推理记录';
@@ -745,80 +818,239 @@ function togglePanel(id){
   document.getElementById(id).classList.toggle('collapsed');
 }
 
-function appendStatusRow(message,{tone='default',spinner=false,icon=''}={}){
-  const statusLog=document.getElementById('statusLog');
-  const row=document.createElement('div');
-  row.className='status-log';
-  const colors={brand:'var(--brand-d)',warn:'var(--amber)',error:'var(--red)'};
-  if(colors[tone]) row.style.color=colors[tone];
-  if(spinner){
-    const spinnerEl=document.createElement('span');
-    spinnerEl.className='spinner';
-    row.appendChild(spinnerEl);
-  }else if(icon){
-    const iconEl=document.createElement('span');
-    iconEl.textContent=icon;
-    row.appendChild(iconEl);
+function resetAgentTrace(){
+  if(agentFlowFocusFrame!==null){
+    cancelAnimationFrame(agentFlowFocusFrame);
+    agentFlowFocusFrame=null;
   }
-  const text=document.createElement('span');
-  text.textContent=String(message??'');
-  row.appendChild(text);
-  statusLog.appendChild(row);
-  statusLog.scrollTop=statusLog.scrollHeight;
-  return row;
+  agentFlowNodes.clear();
+  agentFlowColumns=[];
+  workflowActiveStageId=null;
+  workflowFallbackIndex=0;
+  document.getElementById('agentFlow').replaceChildren();
+  const trace=document.getElementById('agentTrace');
+  trace.style.display='none';
+  trace.classList.remove('collapsed');
+  trace.dataset.state='idle';
+  const badge=document.getElementById('agentTraceBadge');
+  badge.textContent='等待执行';
+  badge.className='badge';
+  document.getElementById('agentTraceLiveText').textContent='等待';
+  const progress=document.getElementById('agentTraceProgress');
+  progress.style.width='0';
+  progress.parentElement.classList.remove('failed');
 }
 
-function resetAgentTrace(){
-  agentEventNodes.clear();
-  document.getElementById('agentTraceList').replaceChildren();
-  document.getElementById('agentTrace').style.display='none';
-  document.getElementById('agentTrace').classList.remove('collapsed');
-  document.getElementById('agentTraceBadge').textContent='等待执行';
+function createAgentFlowNode(evt,flow){
+  // 与上一列的运行中节点并发出现 → 并行分支，归入同列；否则串行新开一列
+  let column=agentFlowColumns[agentFlowColumns.length-1];
+  const isParallel=column&&column.ids.some(id=>agentFlowNodes.get(id)?.state==='running');
+  if(!isParallel){
+    column={ids:[],el:document.createElement('div'),link:null};
+    column.el.className='flow-col';
+    if(agentFlowColumns.length){
+      column.link=document.createElement('div');
+      column.link.className='flow-link';
+      const particle=document.createElement('i');
+      particle.className='flow-particle';
+      column.link.appendChild(particle);
+      flow.appendChild(column.link);
+    }
+    flow.appendChild(column.el);
+    agentFlowColumns.push(column);
+  }
+
+  const el=document.createElement('div');
+  el.className=`flow-node${evt.kind==='stage'?' stage':''}`;
+  el.setAttribute('role','listitem');
+  const top=document.createElement('div');
+  top.className='fn-top';
+  const stateIcon=document.createElement('span');
+  stateIcon.className='fn-state';
+  const kindChip=document.createElement('span');
+  kindChip.className='fn-kind';
+  kindChip.textContent=evt.kind==='tool'?'工具调用':evt.kind==='stage'?'生成阶段':'流程步骤';
+  top.append(stateIcon,kindChip);
+  const label=document.createElement('div');
+  label.className='fn-label';
+  const detail=document.createElement('div');
+  detail.className='fn-detail';
+  const meta=document.createElement('div');
+  meta.className='fn-meta';
+  el.append(top,label,detail,meta);
+  column.el.appendChild(el);
+  column.ids.push(evt.id);
+  if(column.ids.length>1) column.el.classList.add('parallel');
+
+  const node={id:evt.id,kind:evt.kind||'step',el,stateIcon,label,detail,meta,state:'running',index:agentFlowNodes.size+1};
+  stateIcon.textContent=node.index;
+  agentFlowNodes.set(evt.id,node);
+  return node;
+}
+
+function updateAgentFlowLinks(){
+  agentFlowColumns.forEach(column=>{
+    if(!column.link) return;
+    const states=column.ids.map(id=>agentFlowNodes.get(id)?.state);
+    column.link.classList.remove('flowing','done','failed');
+    if(states.includes('failed')) column.link.classList.add('failed');
+    else if(states.includes('running')) column.link.classList.add('flowing');
+    else if(states.length&&states.every(state=>state==='completed')) column.link.classList.add('done');
+  });
+}
+
+function updateAgentTraceSummary(){
+  const states=Array.from(agentFlowNodes.values()).map(node=>node.state);
+  const completed=states.filter(state=>state==='completed').length;
+  const failed=states.filter(state=>state==='failed').length;
+  const running=states.filter(state=>state==='running').length;
+  const trace=document.getElementById('agentTrace');
+  const badge=document.getElementById('agentTraceBadge');
+  const summaryState=failed?'failed':running?'running':states.length&&completed===states.length?'completed':'idle';
+  trace.dataset.state=summaryState;
+  badge.className=`badge ${summaryState==='idle'?'':summaryState}`.trim();
+  badge.textContent=failed?`${failed} 步失败`:running?`${completed}/${states.length} · 执行中`:states.length?`${completed} 步完成`:'等待执行';
+  document.getElementById('agentTraceLiveText').textContent=failed?'异常':running?'实时':states.length?'完成':'等待';
+  const progress=document.getElementById('agentTraceProgress');
+  progress.style.width=states.length?`${Math.round((completed+failed)/states.length*100)}%`:'0';
+  progress.parentElement.classList.toggle('failed',failed>0);
+}
+
+function focusRunningAgentNode(flow,nodeEl){
+  if(agentFlowFocusFrame!==null) cancelAnimationFrame(agentFlowFocusFrame);
+  agentFlowFocusFrame=requestAnimationFrame(()=>{
+    agentFlowFocusFrame=null;
+    if(!nodeEl.classList.contains('running')) return;
+    const flowRect=flow.getBoundingClientRect();
+    const nodeRect=nodeEl.getBoundingClientRect();
+    const isVertical=getComputedStyle(flow).flexDirection==='column';
+    if(isVertical){
+      const top=flow.scrollTop+(nodeRect.top-flowRect.top)-(flow.clientHeight-nodeRect.height)/2;
+      flow.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+    }else{
+      const left=flow.scrollLeft+(nodeRect.left-flowRect.left)-(flow.clientWidth-nodeRect.width)/2;
+      flow.scrollTo({left:Math.max(0,left),behavior:'smooth'});
+    }
+  });
 }
 
 function renderAgentEvent(evt){
   if(!evt||!evt.id) return;
-  const panel=document.getElementById('agentTrace');
-  const list=document.getElementById('agentTraceList');
-  panel.style.display='block';
-
-  let node=agentEventNodes.get(evt.id);
-  if(!node){
-    const row=document.createElement('div');
-    row.className=`agent-event ${evt.kind==='tool'?'tool':'step'}`;
-    const stateIcon=document.createElement('span');
-    stateIcon.className='state-icon';
-    const body=document.createElement('div');
-    const label=document.createElement('div');
-    label.className='agent-label';
-    const detail=document.createElement('div');
-    detail.className='agent-detail';
-    const meta=document.createElement('div');
-    meta.className='agent-meta';
-    body.append(label,detail,meta);
-    row.append(stateIcon,body);
-    list.appendChild(row);
-    node={row,stateIcon,label,detail,meta,state:'running'};
-    agentEventNodes.set(evt.id,node);
+  if(evt.kind!=='stage'&&workflowActiveStageId==='workflow-agent-start'){
+    completeWorkflowStage('workflow-agent-start','经营数据 Agent 已启动');
   }
+  const flow=document.getElementById('agentFlow');
+  document.getElementById('agentTrace').style.display='block';
 
+  const node=agentFlowNodes.get(evt.id)||createAgentFlowNode(evt,flow);
   node.state=evt.state||'running';
-  node.row.classList.remove('running','completed','failed');
-  node.row.classList.add(node.state);
-  node.stateIcon.textContent=node.state==='completed'?'✓':node.state==='failed'?'!':'…';
+  node.el.classList.remove('running','completed','failed');
+  node.el.classList.add(node.state);
+  node.stateIcon.textContent=node.state==='completed'?'✓':node.state==='failed'?'!':node.index;
   node.label.textContent=String(evt.label||evt.id);
   node.detail.textContent=String(evt.detail||'');
+  node.detail.title=String(evt.detail||'');
+  node.detail.hidden=!evt.detail;
+  node.el.setAttribute('aria-label',`${node.label.textContent}，${node.state==='completed'?'已完成':node.state==='failed'?'失败':'执行中'}`);
   const metaParts=[];
   if(evt.tool_name) metaParts.push(evt.tool_name);
   if(evt.source) metaParts.push(`来源: ${evt.source}`);
   if(Number.isFinite(evt.duration_ms)) metaParts.push(`${evt.duration_ms}ms`);
-  node.meta.textContent=metaParts.join(' · ');
+  node.meta.replaceChildren(...metaParts.map(text=>{
+    const chip=document.createElement('span');
+    chip.textContent=text;
+    return chip;
+  }));
 
-  const states=Array.from(agentEventNodes.values()).map(item=>item.state);
-  const completed=states.filter(state=>state==='completed').length;
-  const failed=states.filter(state=>state==='failed').length;
-  document.getElementById('agentTraceBadge').textContent=failed?`${failed} 步失败`:completed===states.length?`${completed} 步完成`:`${completed}/${states.length} 完成`;
-  list.scrollTop=list.scrollHeight;
+  updateAgentFlowLinks();
+  updateAgentTraceSummary();
+  if(node.state==='running') focusRunningAgentNode(flow,node.el);
+}
+
+function workflowStageLabel(id,fallback='生成阶段'){
+  return agentFlowNodes.get(id)?.label.textContent||fallback;
+}
+
+function startWorkflowStage(id,label,detail){
+  if(workflowActiveStageId&&workflowActiveStageId!==id){
+    completeWorkflowStage(workflowActiveStageId,'已完成');
+  }
+  workflowActiveStageId=id;
+  renderAgentEvent({kind:'stage',id,state:'running',label,detail});
+}
+
+function completeWorkflowStage(id,detail){
+  if(!id||!agentFlowNodes.has(id)) return;
+  if(workflowActiveStageId===id) workflowActiveStageId=null;
+  renderAgentEvent({
+    kind:'stage',id,state:'completed',
+    label:workflowStageLabel(id),detail:detail||'已完成',
+  });
+}
+
+function failWorkflowStage(message){
+  let id=workflowActiveStageId;
+  let node=id?agentFlowNodes.get(id):null;
+  if(!node){
+    node=Array.from(agentFlowNodes.values()).reverse().find(item=>item.state==='running');
+    id=node?.id;
+  }
+  workflowActiveStageId=null;
+  if(id&&node){
+    renderAgentEvent({kind:node.kind,id,state:'failed',label:node.label.textContent,detail:message});
+  }else{
+    renderAgentEvent({kind:'stage',id:'workflow-error',state:'failed',label:'生成流程异常',detail:message});
+  }
+}
+
+function renderWorkflowStatus(message){
+  const text=String(message||'').trim();
+  if(!text) return;
+
+  if(text.includes('启动多步经营数据 Agent')){
+    startWorkflowStage('workflow-agent-start','启动经营数据 Agent','准备门店经营数据上下文');
+  }else if(text.includes('正在检索 Memory')){
+    completeWorkflowStage('workflow-agent-start','经营数据准备完成');
+    startWorkflowStage('workflow-memory','检索 Memory 历史样例','查找相似成功与失败案例');
+  }else if(/^找到\s*\d+\s*条相似历史样例/.test(text)){
+    completeWorkflowStage('workflow-memory',text);
+  }else if(text.includes('正在组装 Prompt')){
+    completeWorkflowStage('workflow-memory','历史样例检索完成');
+    startWorkflowStage('workflow-prompt','组装生成 Prompt','注入 Skills、Few-Shot 与当日经营数据');
+  }else if(text.includes('正在调用 LLM')){
+    completeWorkflowStage('workflow-prompt','Prompt 组装完成');
+    startWorkflowStage('workflow-llm','调用 LLM 生成方案',text.replace(/^正在/,'').replace(/生成中\.\.\.$/,''));
+  }else if(text.includes('Mock 模式')){
+    completeWorkflowStage('workflow-prompt','Prompt 组装完成');
+    startWorkflowStage('workflow-llm','调用 Mock 生成器','未配置 LLM API Key，使用模拟生成');
+  }else if(text.includes('正在解析结构化输出')){
+    completeWorkflowStage('workflow-llm','模型输出流接收完成');
+    startWorkflowStage('workflow-parse','解析结构化输出','校验菜单与经营方案字段');
+  }else if(text.includes('正在部署菜谱页面')){
+    completeWorkflowStage('workflow-parse','结构化结果解析完成');
+    startWorkflowStage('workflow-deploy','部署菜谱页面','生成独立菜谱页面与访问链接');
+  }else if(text.includes('方案已生成，等待门店负责人确认')){
+    completeWorkflowStage('workflow-deploy','菜谱页面部署完成');
+    startWorkflowStage('workflow-save','保存待确认方案','等待门店负责人确认与决策');
+  }else if(text.includes('生成完成，待门店负责人决策')){
+    completeWorkflowStage('workflow-save','方案已保存，等待负责人决策');
+  }else{
+    const id=`workflow-status-${++workflowFallbackIndex}`;
+    startWorkflowStage(id,'处理生成任务',text);
+  }
+}
+
+function renderRestoredWorkflow(plan,savedTrace){
+  renderAgentEvent({kind:'stage',id:'workflow-agent-start',state:'completed',label:'启动经营数据 Agent',detail:'已恢复经营数据上下文'});
+  savedTrace.forEach(renderAgentEvent);
+  [
+    ['workflow-memory','检索 Memory 历史样例','历史样例检索已完成'],
+    ['workflow-prompt','组装生成 Prompt','Skills 与 Few-Shot 注入完成'],
+    ['workflow-llm','调用 LLM 生成方案','模型生成已完成'],
+    ['workflow-parse','解析结构化输出','结果契约校验完成'],
+    ['workflow-deploy','部署菜谱页面','菜谱访问链接已生成'],
+    ['workflow-save','保存待确认方案',recommendationStatus(plan)],
+  ].forEach(([id,label,detail])=>renderAgentEvent({kind:'stage',id,state:'completed',label,detail}));
 }
 
 /* 将任意大小的 SSE 分片拆成稳定的逐字播放队列，完成后仅解析一次 Markdown。 */
@@ -894,8 +1126,6 @@ async function generate(){
 
   // 显示引擎区
   document.getElementById('engineIdle').style.display='none';
-  document.getElementById('statusLog').style.display='block';
-  document.getElementById('statusLog').replaceChildren();
   resetAgentTrace();
   document.getElementById('dualPanel').style.display='flex';
   document.getElementById('panelThinking').style.display=showThinking?'':'none';
@@ -909,7 +1139,6 @@ async function generate(){
   document.getElementById('thinkingBadge').textContent='等待思考...';
   document.getElementById('outputBadge').textContent='等待生成';
 
-  const statusLog=document.getElementById('statusLog');
   let thinkingText='';
   let outputText='';
   let terminalReceived=false;
@@ -945,7 +1174,7 @@ async function generate(){
         try{
           const evt=JSON.parse(line.slice(6));
           if(evt.type==='status'){
-            appendStatusRow(evt.content,{spinner:true});
+            renderWorkflowStatus(evt.content);
           }else if(evt.type==='agent'){
             renderAgentEvent(evt.content);
           }else if(evt.type==='thinking'&&showThinking){
@@ -982,14 +1211,17 @@ async function generate(){
             document.getElementById('outputBadge').textContent='完成';
             renderResult(result);
             document.getElementById('engineStatus').textContent='⏳ 待负责人确认';
-            appendStatusRow(`${result.mock_mode?'Mock模式 · ':''}方案已生成，等待负责人确认 · Memory: ${result.memory_count}条`,{tone:'warn',icon:'⏳'});
+            completeWorkflowStage(
+              'workflow-save',
+              `${result.mock_mode?'Mock 模式 · ':''}方案已保存 · Memory: ${result.memory_count} 条`,
+            );
           }else if(evt.type==='error'){
             terminalReceived=true;
             await Promise.all([
               showThinking?thinkingRenderer.finish(thinkingText):Promise.resolve(),
               outputRenderer.finish(outputText),
             ]);
-            appendStatusRow(evt.content,{tone:'error',icon:'❌'});
+            failWorkflowStage(evt.content);
             document.getElementById('engineStatus').textContent='错误';
             if(showThinking) document.getElementById('thinkingBadge').textContent='错误';
             document.getElementById('outputBadge').textContent='错误';
@@ -1003,7 +1235,7 @@ async function generate(){
       showThinking?thinkingRenderer.finish(thinkingText):Promise.resolve(),
       outputRenderer.finish(outputText),
     ]);
-    appendStatusRow(`连接失败: ${e.message}`,{tone:'error',icon:'❌'});
+    failWorkflowStage(`连接失败: ${e.message}`);
     document.getElementById('engineStatus').textContent='错误';
     if(showThinking) document.getElementById('thinkingBadge').textContent='错误';
     document.getElementById('outputBadge').textContent='错误';
