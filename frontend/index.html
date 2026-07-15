@@ -971,7 +971,14 @@ async function generate(){
               showThinking?thinkingRenderer.finish(thinkingText):Promise.resolve(),
               outputRenderer.finish(outputText),
             ]);
-            if(showThinking) document.getElementById('thinkingBadge').textContent='完成';
+            if(showThinking){
+              if(thinkingText.trim()){
+                document.getElementById('thinkingBadge').textContent='完成';
+              }else{
+                document.getElementById('thinkingBadge').textContent='无推理内容';
+                renderStaticMarkdown('thinkingBody','','模型未返回可展示的推理内容。');
+              }
+            }
             document.getElementById('outputBadge').textContent='完成';
             renderResult(result);
             document.getElementById('engineStatus').textContent='⏳ 待负责人确认';

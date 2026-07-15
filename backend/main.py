@@ -111,6 +111,7 @@ async def health():
         "mock_mode": config.mock_mode,
         "llm_model": config.LLM_MODEL,
         "llm_base_url": config.LLM_BASE_URL,
+        "llm_provider": config.resolved_llm_provider,
         "agent_enabled": True,
         "mcp_enabled": config.MCP_ENABLED,
         "mcp_required": config.MCP_REQUIRED,

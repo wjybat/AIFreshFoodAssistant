@@ -28,6 +28,7 @@ from .skills import build_system_prompt, build_few_shot, build_user_prompt
 
 
 logger = logging.getLogger(__name__)
+ZHIPU_THINKING_MODELS = frozenset({"glm-5.2", "glm-5.1", "glm-5", "glm-4.7"})
 
 
 class LLMEngine:
@@ -119,10 +120,11 @@ class LLMEngine:
                 raw_thinking = ""
                 raw_output = ""
                 async for evt_type, token in self._call_llm_stream(system_prompt, full_user_prompt, enable_thinking):
-                    if evt_type == "thinking" and enable_thinking:
-                        raw_thinking += token
-                        yield self._sse("thinking", token)
-                    else:
+                    if evt_type == "thinking":
+                        if enable_thinking:
+                            raw_thinking += token
+                            yield self._sse("thinking", token)
+                    elif evt_type == "token":
                         raw_output += token
                         yield self._sse("token", token)
             else:
@@ -130,10 +132,11 @@ class LLMEngine:
                 raw_thinking = ""
                 raw_output = ""
                 async for evt_type, token in self._mock_generate(working_input, enable_thinking):
-                    if evt_type == "thinking" and enable_thinking:
-                        raw_thinking += token
-                        yield self._sse("thinking", token)
-                    else:
+                    if evt_type == "thinking":
+                        if enable_thinking:
+                            raw_thinking += token
+                            yield self._sse("thinking", token)
+                    elif evt_type == "token":
                         raw_output += token
                         yield self._sse("token", token)
 
@@ -201,6 +204,35 @@ class LLMEngine:
         """流式调用 LLM API，逐 token 返回 (type, token) 元组
         type: "thinking" (reasoning_content) 或 "token" (content)
         """
+        kwargs = self._build_chat_request(
+            system_prompt,
+            user_prompt,
+            enable_thinking,
+        )
+
+        assert self.client is not None
+        response = await self.client.chat.completions.create(**kwargs)
+
+        async for chunk in response:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            reasoning_content = self._delta_value(delta, "reasoning_content")
+            content = self._delta_value(delta, "content")
+            if enable_thinking and reasoning_content:
+                yield ("thinking", str(reasoning_content))
+                await asyncio.sleep(0.01)
+            if content:
+                yield ("token", str(content))
+                await asyncio.sleep(0.01)
+
+    @staticmethod
+    def _build_chat_request(
+        system_prompt: str,
+        user_prompt: str,
+        enable_thinking: bool,
+    ) -> dict:
+        """Build an OpenAI-compatible request with provider-specific extensions."""
         kwargs = dict(
             model=config.LLM_MODEL,
             messages=[
@@ -208,26 +240,29 @@ class LLMEngine:
                 {"role": "user", "content": user_prompt},
             ],
             stream=True,
-            temperature=0.7,
-            max_tokens=8192,
+            temperature=config.LLM_TEMPERATURE,
+            max_tokens=config.LLM_MAX_TOKENS,
         )
-        if enable_thinking:
+        provider = config.resolved_llm_provider
+        model = config.LLM_MODEL.strip().lower().split("[", 1)[0]
+        if provider == "zhipu" and model in ZHIPU_THINKING_MODELS:
+            extra_body = {
+                "thinking": {
+                    "type": "enabled" if enable_thinking else "disabled"
+                }
+            }
+            if enable_thinking and model == "glm-5.2":
+                extra_body["reasoning_effort"] = config.LLM_REASONING_EFFORT
+            kwargs["extra_body"] = extra_body
+        elif provider == "legacy" and enable_thinking:
             kwargs["extra_body"] = {"enable_thinking": True}
+        return kwargs
 
-        response = await self.client.chat.completions.create(**kwargs)
-
-        async for chunk in response:
-            if not chunk.choices:
-                continue
-            delta = chunk.choices[0].delta
-            # 深度思考内容
-            if enable_thinking and hasattr(delta, "reasoning_content") and delta.reasoning_content:
-                yield ("thinking", delta.reasoning_content)
-                await asyncio.sleep(0.01)
-            # 正文内容
-            if delta.content:
-                yield ("token", delta.content)
-                await asyncio.sleep(0.01)
+    @staticmethod
+    def _delta_value(delta, name: str):
+        if isinstance(delta, dict):
+            return delta.get(name)
+        return getattr(delta, name, None)
 
     async def _mock_generate(self, input_data: dict, enable_thinking: bool = True) -> AsyncGenerator[tuple, None]:
         """

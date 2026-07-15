@@ -90,6 +90,7 @@ def main():
     print("=" * 60)
     print(f"  模式: {'Mock（未配置API Key）' if config.mock_mode else '真实LLM'}")
     print(f"  模型: {config.LLM_MODEL}")
+    print(f"  LLM Provider: {config.resolved_llm_provider}")
     print(f"  多步 Agent: 已启用")
     print(
         f"  MCP 数据: {'已启用（必需）' if config.MCP_ENABLED and config.MCP_REQUIRED else '已启用（可回退）' if config.MCP_ENABLED else '未启用'}"
