@@ -1,4 +1,6 @@
 .workbuddy/
+.tmp/*
+!.tmp/AIFreshFoodAssistant-mcp-dev/
 __pycache__/
 recipes/
 .env

@@ -36,7 +36,7 @@ llm_engine = LLMEngine(memory_store)
 app = FastAPI(
     title="AI 社区餐桌预测引擎",
     description="基于 LLM Agentic Workflow 的即时烹饪场景经营平台",
-    version="2.0",
+    version="2.1",
 )
 
 # 挂载静态目录
@@ -111,6 +111,9 @@ async def health():
         "mock_mode": config.mock_mode,
         "llm_model": config.LLM_MODEL,
         "llm_base_url": config.LLM_BASE_URL,
+        "agent_enabled": True,
+        "mcp_enabled": config.MCP_ENABLED,
+        "mcp_required": config.MCP_REQUIRED,
         "memory_count": memory_store.count(),
         "server_url": config.SERVER_URL,
     }

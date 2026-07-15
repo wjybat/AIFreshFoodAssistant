@@ -15,15 +15,19 @@ LLM Agentic Workflow 引擎 —— 核心推理生成模块
 """
 import json
 import re
-import time
 import asyncio
+import logging
+from html import escape
 from typing import AsyncGenerator
-from pathlib import Path
 
+from .agent import AgentDataError, OperationalDataAgent, REQUIRED_MCP_TOOLS
 from .config import config
+from .mcp_client import MCPToolClient
 from .memory import MemoryStore
 from .skills import build_system_prompt, build_few_shot, build_user_prompt
-from .data_loader import format_for_display
+
+
+logger = logging.getLogger(__name__)
 
 
 class LLMEngine:
@@ -32,11 +36,27 @@ class LLMEngine:
     def __init__(self, memory_store: MemoryStore):
         self.memory = memory_store
         self.client = None
+        mcp_client = None
+
+        if config.MCP_ENABLED:
+            mcp_client = MCPToolClient(
+                config.MCP_SERVER_URL,
+                allowed_tools=REQUIRED_MCP_TOOLS,
+                timeout_seconds=config.MCP_TIMEOUT_SECONDS,
+                max_response_bytes=config.MCP_MAX_RESPONSE_BYTES,
+                auth_token=config.MCP_AUTH_TOKEN,
+            )
+        self.data_agent = OperationalDataAgent(
+            mcp_client,
+            required=config.MCP_REQUIRED,
+            sales_window_days=config.AGENT_SALES_WINDOW_DAYS,
+            max_products=config.AGENT_MAX_PRODUCTS,
+        )
 
         if not config.mock_mode:
             try:
-                from openai import OpenAI
-                self.client = OpenAI(
+                from openai import AsyncOpenAI
+                self.client = AsyncOpenAI(
                     api_key=config.LLM_API_KEY,
                     base_url=config.LLM_BASE_URL,
                 )
@@ -54,33 +74,45 @@ class LLMEngine:
 
         事件类型:
           - status: 状态更新（"正在检索Memory..."等）
+          - agent: 多步 Agent 的高层步骤与 MCP 工具调用轨迹
           - thinking: LLM 深度思考输出（reasoning_content）
           - token: LLM 正文输出（content）
           - done: 生成完成，携带结构化结果
           - error: 错误信息
         """
         try:
-            # ===== Step 1: Memory 检索 =====
+            # ===== Step 1: 多步经营数据 Agent =====
+            yield self._sse("status", "正在启动多步经营数据 Agent...")
+            working_input = input_data
+            agent_trace = []
+            async for agent_event_type, payload in self.data_agent.run(input_data):
+                if agent_event_type == "event":
+                    yield self._sse("agent", payload)
+                elif agent_event_type == "result":
+                    working_input = payload["input_data"]
+                    agent_trace = payload.get("trace", [])
+
+            # ===== Step 2: Memory 检索 =====
             yield self._sse("status", "正在检索 Memory 历史成功样例...")
             await asyncio.sleep(0.3)
 
             memory_cases = self.memory.retrieve_cases(
-                input_data, top_k=config.MEMORY_TOP_K
+                working_input, top_k=config.MEMORY_TOP_K
             )
             yield self._sse("status", f"找到 {len(memory_cases)} 条相似历史样例")
             await asyncio.sleep(0.2)
 
-            # ===== Step 2: Prompt 组装 =====
+            # ===== Step 3: Prompt 组装 =====
             yield self._sse("status", "正在组装 Prompt（注入 Skills + Few-Shot）...")
             await asyncio.sleep(0.3)
 
             system_prompt = build_system_prompt()
             few_shot = build_few_shot(memory_cases)
-            user_prompt = build_user_prompt(input_data)
+            user_prompt = build_user_prompt(working_input)
 
             full_user_prompt = few_shot + "\n" + user_prompt
 
-            # ===== Step 3: LLM 调用 =====
+            # ===== Step 4: LLM 调用 =====
             if self.is_real_mode:
                 mode_label = "深度思考" if enable_thinking else "标准模式"
                 yield self._sse("status", f"正在调用 LLM ({config.LLM_MODEL} · {mode_label}) 生成中...")
@@ -97,7 +129,7 @@ class LLMEngine:
                 yield self._sse("status", "⚠️ Mock 模式（未配置 LLM API Key）—— 使用模拟生成")
                 raw_thinking = ""
                 raw_output = ""
-                async for evt_type, token in self._mock_generate(input_data, enable_thinking):
+                async for evt_type, token in self._mock_generate(working_input, enable_thinking):
                     if evt_type == "thinking" and enable_thinking:
                         raw_thinking += token
                         yield self._sse("thinking", token)
@@ -105,7 +137,7 @@ class LLMEngine:
                         raw_output += token
                         yield self._sse("token", token)
 
-            # ===== Step 4: 输出解析 =====
+            # ===== Step 5: 输出解析 =====
             yield self._sse("status", "LLM 生成完成，正在解析结构化输出...")
             await asyncio.sleep(0.3)
 
@@ -113,18 +145,23 @@ class LLMEngine:
             if result is None:
                 yield self._sse("error", "无法解析 LLM 输出中的 JSON 结果")
                 return
+            try:
+                self._validate_result_contract(result)
+            except ValueError as exc:
+                yield self._sse("error", f"LLM 输出不符合结果契约: {exc}")
+                return
 
-            # ===== Step 5: 菜谱页面部署 =====
+            # ===== Step 6: 菜谱页面部署 =====
             yield self._sse("status", "正在部署菜谱页面到云端...")
             await asyncio.sleep(0.3)
 
-            recipe_urls = self._deploy_recipe_pages(result, input_data)
+            recipe_urls = self._deploy_recipe_pages(result, working_input)
 
-            # ===== Step 6: 等待门店负责人决策 =====
+            # ===== Step 7: 等待门店负责人决策 =====
             yield self._sse("status", "方案已生成，等待门店负责人确认...")
             await asyncio.sleep(0.2)
             plan_id = self.memory.create_pending_recommendation(
-                input_context=input_data,
+                input_context=working_input,
                 output=result,
                 recipe_urls=recipe_urls,
                 raw_thinking=raw_thinking,
@@ -141,14 +178,26 @@ class LLMEngine:
                 "raw_output": raw_output,
                 "memory_count": self.memory.count(),
                 "mock_mode": not self.is_real_mode,
+                "input_context": working_input,
+                "agent_trace": agent_trace,
+                "operational_data": working_input.get("operational_data", {}),
             })
 
         except Exception as e:
-            import traceback
-            tb = traceback.format_exc()
-            yield self._sse("error", f"生成过程出错: {str(e)}\n{tb}")
+            if isinstance(e, (AgentDataError, ValueError)):
+                logger.warning("Generation workflow rejected input: %s", e)
+                message = str(e)
+            else:
+                logger.exception("Generation workflow failed")
+                message = "内部服务异常，请检查后端日志"
+            yield self._sse("error", f"生成过程出错: {message}")
 
-    async def _call_llm_stream(self, system_prompt: str, user_prompt: str, enable_thinking: bool = True) -> AsyncGenerator[tuple, None]:
+    async def _call_llm_stream(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        enable_thinking: bool = True,
+    ) -> AsyncGenerator[tuple, None]:
         """流式调用 LLM API，逐 token 返回 (type, token) 元组
         type: "thinking" (reasoning_content) 或 "token" (content)
         """
@@ -165,9 +214,9 @@ class LLMEngine:
         if enable_thinking:
             kwargs["extra_body"] = {"enable_thinking": True}
 
-        response = self.client.chat.completions.create(**kwargs)
+        response = await self.client.chat.completions.create(**kwargs)
 
-        for chunk in response:
+        async for chunk in response:
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
@@ -236,18 +285,19 @@ class LLMEngine:
 ```
 """
 
-        # 分离思维链和正文，逐字符流式输出
+        # 分离思维链和正文。前端负责稳定逐字播放，后端按小块发送以避免
+        # Mock 模式为每个字符创建一次异步调度。
         split_marker = "【生成结果】"
         thinking_part, _, output_part = mock_text.partition(split_marker)
         output_part = "【生成结果】" + output_part
 
         if enable_thinking:
-            for char in thinking_part:
-                yield ("thinking", char)
-                await asyncio.sleep(0.003)
-        for char in output_part:
-            yield ("token", char)
-            await asyncio.sleep(0.003)
+            for index in range(0, len(thinking_part), 12):
+                yield ("thinking", thinking_part[index:index + 12])
+                await asyncio.sleep(0.01)
+        for index in range(0, len(output_part), 16):
+            yield ("token", output_part[index:index + 16])
+            await asyncio.sleep(0.01)
 
     def _suggest_dishes_mock(self, expiring: list, high_stock: list) -> list:
         """基于临期/高库存商品推测菜谱（Mock 模式用）"""
@@ -366,6 +416,35 @@ class LLMEngine:
 
         return None
 
+    @staticmethod
+    def _validate_result_contract(result: dict) -> None:
+        required = {
+            "scenario_tag": str,
+            "menus": list,
+            "value_estimate": dict,
+            "staff_instructions": list,
+            "display_plan": dict,
+            "cross_sell": str,
+        }
+        missing = [name for name in required if name not in result]
+        if missing:
+            raise ValueError("缺少字段: " + ", ".join(missing))
+        invalid = [
+            name for name, expected_type in required.items()
+            if not isinstance(result.get(name), expected_type)
+        ]
+        if invalid:
+            raise ValueError("字段类型错误: " + ", ".join(invalid))
+        if not result["scenario_tag"].strip():
+            raise ValueError("scenario_tag 不能为空")
+        if not result["menus"]:
+            raise ValueError("menus 不能为空")
+        if any(
+            not isinstance(menu, dict) or not menu.get("dish")
+            for menu in result["menus"]
+        ):
+            raise ValueError("menus 中每项都必须包含 dish")
+
     def _deploy_recipe_pages(self, result: dict, input_data: dict) -> dict:
         """
         为每道菜生成独立的 HTML 菜谱页面，部署到 recipes/ 目录
@@ -392,23 +471,26 @@ class LLMEngine:
 
     def _build_recipe_html(self, menu: dict, store_name: str, scenario_tag: str) -> str:
         """生成单道菜的独立 HTML 菜谱页面"""
-        dish = menu.get("dish", "")
-        emoji = menu.get("emoji", "🍳")
-        servings = menu.get("servings", "")
-        cook_time = menu.get("cook_time", "")
-        difficulty = menu.get("difficulty", "")
+        safe = lambda value: escape(str(value or ""), quote=True)
+        dish = safe(menu.get("dish", ""))
+        emoji = safe(menu.get("emoji", "🍳"))
+        servings = safe(menu.get("servings", ""))
+        cook_time = safe(menu.get("cook_time", ""))
+        difficulty = safe(menu.get("difficulty", ""))
         ingredients = menu.get("ingredients", [])
         recipe = menu.get("recipe", {})
         steps = recipe.get("steps", [])
-        tips = recipe.get("tips", "")
-        package_price = menu.get("package_price", "")
-        original_price = menu.get("original_price", "")
+        tips = safe(recipe.get("tips", ""))
+        package_price = safe(menu.get("package_price", ""))
+        original_price = safe(menu.get("original_price", ""))
 
         ingredients_html = "".join(
-            f"<tr><td>{ing.get('name','')}</td><td>{ing.get('amount','')}</td><td>{ing.get('note','')}</td></tr>"
-            for ing in ingredients
+            f"<tr><td>{safe(ing.get('name',''))}</td><td>{safe(ing.get('amount',''))}</td><td>{safe(ing.get('note',''))}</td></tr>"
+            for ing in ingredients if isinstance(ing, dict)
         )
-        steps_html = "".join(f"<li>{step}</li>" for step in steps)
+        steps_html = "".join(f"<li>{safe(step)}</li>" for step in steps)
+        store_name = safe(store_name)
+        scenario_tag = safe(scenario_tag)
 
         return f"""<!DOCTYPE html>
 <html lang="zh-CN">

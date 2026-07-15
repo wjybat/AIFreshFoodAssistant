@@ -92,7 +92,26 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .status-log{font-size:12px;color:var(--brand-d);padding:6px 0;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:6px}
 .status-log:last-child{border-bottom:none}
 .status-log .spinner{width:12px;height:12px;border:2px solid var(--brand-l);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}
+.agent-trace{margin:10px 0 0;border:1px solid #c7d2fe;border-radius:12px;background:#f8faff;overflow:hidden}
+.agent-trace-head{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#eef2ff;cursor:pointer;user-select:none}
+.agent-trace-head h4{font-size:12.5px;color:#4338ca;font-weight:700}
+.agent-trace-head .badge{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:5px;background:#c7d2fe;color:#3730a3;font-weight:700}
+.agent-trace-head .arrow{font-size:11px;color:#6366f1;transition:.2s}
+.agent-trace.collapsed .arrow{transform:rotate(-90deg)}
+.agent-trace.collapsed .agent-trace-list{display:none}
+.agent-trace-list{padding:6px 12px;max-height:250px;overflow:auto}
+.agent-event{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid #e0e7ff;color:#334155}
+.agent-event:last-child{border-bottom:none}
+.agent-event.tool{margin-left:18px}
+.agent-event .state-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:800}
+.agent-event.running .state-icon{animation:pulse 1.2s ease-in-out infinite}
+.agent-event.completed .state-icon{background:#dcfce7;color:#15803d}
+.agent-event.failed .state-icon{background:#fee2e2;color:#dc2626}
+.agent-event .agent-label{font-size:12px;font-weight:700;color:#312e81}
+.agent-event .agent-detail{font-size:11px;color:#64748b;margin-top:2px;overflow-wrap:anywhere}
+.agent-event .agent-meta{font-size:10px;color:#94a3b8;margin-top:3px;overflow-wrap:anywhere}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{opacity:.45;transform:scale(.86)}}
 .thinking-chain{background:#0f172a;color:#cbd5e1;font-family:"Cascadia Code","Fira Code",Consolas,monospace;font-size:12.5px;line-height:1.7;padding:16px;border-radius:10px;max-height:400px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;margin-top:10px}
 .thinking-chain .cursor{display:inline-block;width:8px;height:14px;background:var(--brand);animation:blink 1s steps(1) infinite;vertical-align:middle}
 @keyframes blink{50%{opacity:0}}
@@ -228,6 +247,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 /* ===== 响应式 ===== */
 @media(max-width:1280px){.grid{grid-template-columns:1fr}.value-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.agent-event.tool{margin-left:8px}.agent-trace-list{padding:6px 9px}.value-grid{grid-template-columns:1fr}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .fade-up{animation:fadeUp .5s ease both}
 </style>
@@ -286,6 +306,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
           <p class="hint">LLM 将根据 Memory 历史样例 + Skills 领域知识 + 当日数据推理生成菜单候选</p>
         </div>
         <div id="statusLog" style="display:none"></div>
+        <div class="agent-trace" id="agentTrace" style="display:none">
+          <div class="agent-trace-head" onclick="togglePanel('agentTrace')">
+            <span>🧭</span><h4>多步 Agent 执行轨迹</h4><span class="badge" id="agentTraceBadge">等待执行</span><span class="arrow">▼</span>
+          </div>
+          <div class="agent-trace-list" id="agentTraceList"></div>
+        </div>
         <div class="dual-panel" id="dualPanel" style="display:none">
           <div class="panel-thinking" id="panelThinking">
             <div class="panel-thinking-head" onclick="togglePanel('panelThinking')">
@@ -343,7 +369,81 @@ let currentData=null;
 let currentResult=null;
 let recipeUrls={};
 let currentPlanId=null;
+let currentRawThinking='';
 let generating=false;
+const agentEventNodes=new Map();
+
+function escapeHtml(value){
+  return String(value??'').replace(/[&<>"']/g,char=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[char]));
+}
+
+function escapeRawHtmlForMarkdown(value){
+  return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+}
+
+const safeMarkdownTags=new Set([
+  'A','BLOCKQUOTE','BR','CODE','DEL','EM','H1','H2','H3','H4','H5','H6',
+  'HR','LI','OL','P','PRE','STRONG','TABLE','TBODY','TD','TH','THEAD','TR','UL'
+]);
+
+function isSafeMarkdownUrl(value){
+  try{
+    const url=new URL(String(value||''),window.location.href);
+    return ['http:','https:','mailto:','tel:'].includes(url.protocol);
+  }catch(_error){
+    return false;
+  }
+}
+
+function createSafeMarkdownContent(rawText){
+  const wrapper=document.createElement('div');
+  wrapper.className='md-content';
+  const source=String(rawText??'');
+  if(typeof marked==='undefined'){
+    wrapper.textContent=source;
+    return wrapper;
+  }
+
+  try{
+    const template=document.createElement('template');
+    template.innerHTML=marked.parse(escapeRawHtmlForMarkdown(source));
+    Array.from(template.content.querySelectorAll('*')).forEach(element=>{
+      if(!safeMarkdownTags.has(element.tagName)){
+        element.replaceWith(document.createTextNode(element.textContent||''));
+        return;
+      }
+
+      Array.from(element.attributes).forEach(attribute=>{
+        const name=attribute.name.toLowerCase();
+        const allowed=(element.tagName==='A'&&(name==='href'||name==='title'))
+          ||(element.tagName==='OL'&&name==='start');
+        if(!allowed) element.removeAttribute(attribute.name);
+      });
+
+      if(element.tagName==='A'){
+        const href=element.getAttribute('href');
+        if(!href||!isSafeMarkdownUrl(href)){
+          element.removeAttribute('href');
+        }else{
+          element.setAttribute('rel','noopener noreferrer');
+        }
+      }
+      if(element.tagName==='OL'&&!/^\d+$/.test(element.getAttribute('start')||'')){
+        element.removeAttribute('start');
+      }
+    });
+    wrapper.appendChild(template.content);
+  }catch(_error){
+    wrapper.textContent=source;
+  }
+  return wrapper;
+}
+
+function renderSafeMarkdown(element,rawText){
+  element.replaceChildren(createSafeMarkdownContent(rawText));
+}
 
 /* ============================================================ 初始化 ============================================================ */
 async function init(){
@@ -361,6 +461,9 @@ async function init(){
     }
     if(h.memory_count>0){
       txt.textContent+=` · Memory:${h.memory_count}条`;
+    }
+    if(h.mcp_enabled){
+      txt.textContent+=' · MCP数据';
     }
     if(h.memory_count!==undefined){
       document.getElementById('memCountLabel').textContent=h.memory_count+' 条';
@@ -395,12 +498,12 @@ async function viewMemory(){
         const community=inp.community?.type||'';
         return `<div style="padding:10px;border-bottom:1px solid var(--line2);font-size:11.5px">
           <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <b style="color:var(--brand-d)">#${c.id} ${out.scenario_tag||'未标记'}</b>
-            <span style="color:var(--ink3);font-size:10px">${c.timestamp?.slice(0,19)||''}</span>
+            <b style="color:var(--brand-d)">#${escapeHtml(c.id)} ${escapeHtml(out.scenario_tag||'未标记')}</b>
+            <span style="color:var(--ink3);font-size:10px">${escapeHtml(c.timestamp?.slice(0,19)||'')}</span>
           </div>
-          <div style="color:var(--ink2)">天气: ${weather} | 社区: ${community}</div>
-          <div style="color:var(--ink2)">菜单: ${menus}</div>
-          ${c.tags?.length?`<div style="margin-top:3px">${c.tags.map(t=>`<span style="background:var(--brand-l);color:var(--brand-d);padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px">${t}</span>`).join('')}</div>`:''}
+          <div style="color:var(--ink2)">天气: ${escapeHtml(weather)} | 社区: ${escapeHtml(community)}</div>
+          <div style="color:var(--ink2)">菜单: ${escapeHtml(menus)}</div>
+          ${c.tags?.length?`<div style="margin-top:3px">${c.tags.map(t=>`<span style="background:var(--brand-l);color:var(--brand-d);padding:1px 6px;border-radius:4px;font-size:10px;margin-right:4px">${escapeHtml(t)}</span>`).join('')}</div>`:''}
         </div>`;
       }).join('');
     }
@@ -436,19 +539,19 @@ async function loadDataFiles(){
       return;
     }
     body.innerHTML='<div class="data-select">'+d.files.map(f=>
-      `<button class="data-file-btn" onclick="loadData('${f.path}')"><span class="f-icon">${f.type==='json'?'📋':'📊'}</span><span class="f-name">${f.filename}</span><span class="f-type">${f.type.toUpperCase()}</span></button>`
+      `<button class="data-file-btn" data-path="${escapeHtml(f.path)}" onclick="loadData(this.dataset.path,event)"><span class="f-icon">${f.type==='json'?'📋':'📊'}</span><span class="f-name">${escapeHtml(f.filename)}</span><span class="f-type">${escapeHtml(String(f.type||'').toUpperCase())}</span></button>`
     ).join('')+'</div>';
   }catch(e){
     console.error('loadDataFiles error:',e);
   }
 }
 
-async function loadData(path){
+async function loadData(path,evt){
   try{
     document.querySelectorAll('.data-file-btn').forEach(b=>b.classList.remove('active'));
-    event.target.closest('.data-file-btn').classList.add('active');
+    evt?.currentTarget?.classList.add('active');
 
-    const r=await fetch(`/api/data/${path}`);
+    const r=await fetch(`/api/data/${encodeURIComponent(path)}`);
     const d=await r.json();
     currentData=d.data;
     renderDataViz(d.display);
@@ -466,41 +569,69 @@ async function loadData(path){
 function renderDataViz(d){
   document.getElementById('dataVizCard').style.display='block';
   let html='';
-  const sm=d.summary||{};
+  const inventory=Array.isArray(d.inventory)?d.inventory:[];
+  const sm=d.summary||{
+    expiring_count:inventory.filter(item=>item.status==='临期').length,
+    high_stock_count:inventory.filter(item=>item.stock_level==='high').length,
+  };
+  const operational=d.operational_data||{};
+  const sales=d.sales_summary||{};
+  const salesWindow=operational.sales_window||{};
+  const currency=String(operational.currency||'CNY').toUpperCase();
+  const moneyPrefix=currency==='CNY'?'¥':`${currency} `;
+
+  if(operational.source){
+    const selected=operational.inventory_selected_count;
+    const total=operational.inventory_total_count;
+    const selectionText=Number.isFinite(selected)&&Number.isFinite(total)?` · 分析 ${selected}/${total} 个 SKU`:'';
+    html+=`<div class="data-section"><div class="data-label"><span>🛰️ 经营数据来源</span><span class="tag tag-info">${escapeHtml(operational.transport||'request')}</span></div><div style="font-size:12px;color:var(--ink2)">${escapeHtml(operational.source)}${escapeHtml(selectionText)}</div></div>`;
+    if(operational.warning){
+      html+=`<div style="margin:-5px 0 10px;padding:8px 10px;border-radius:8px;background:var(--warm-l);color:#92400e;font-size:11px;line-height:1.5">⚠️ ${escapeHtml(operational.warning)}</div>`;
+    }
+  }
+
+  if(salesWindow.start_date||sales.record_count!==undefined){
+    const windowText=salesWindow.start_date&&salesWindow.end_date
+      ?`${salesWindow.start_date} 至 ${salesWindow.end_date}`:'未标注窗口';
+    const priceAsOf=operational.price_as_of?` · 价格截至 ${operational.price_as_of}`:'';
+    html+=`<div class="data-section"><div class="data-label"><span>📈 销售与价格证据</span><span class="tag tag-info">${escapeHtml(sales.record_count??operational.sales_record_count??0)}条</span></div><div style="font-size:12px;color:var(--ink2)">${escapeHtml(windowText)}${escapeHtml(priceAsOf)}</div><div class="community-stats"><div class="community-stat"><div class="v">${escapeHtml(sales.total_units??0)}</div><div class="l">窗口销量</div></div><div class="community-stat"><div class="v">${escapeHtml(moneyPrefix)}${escapeHtml(sales.total_revenue??0)}</div><div class="l">窗口销售额</div></div></div></div>`;
+  }
 
   // 库存
-  html+=`<div class="data-section"><div class="data-label"><span>📦 库存与临期预警</span><span class="tag ${sm.expiring_count>0?'tag-danger':'tag-ok'}">${sm.expiring_count||0}项临期</span></div>`;
-  (d.inventory||[]).forEach(it=>{
+  html+=`<div class="data-section"><div class="data-label"><span>📦 库存与临期预警</span><span class="tag ${sm.expiring_count>0?'tag-danger':'tag-ok'}">${escapeHtml(sm.expiring_count||0)}项临期</span></div>`;
+  inventory.forEach(it=>{
     const color=it.status==='临期'?'var(--red)':it.stock_level==='high'?'var(--amber)':'var(--green)';
-    html+=`<div class="inv-row"><span class="dot" style="background:${color}"></span><span class="nm">${it.name}</span><span class="meta">${it.stock}${it.unit||''} · ${it.status==='临期'?it.expiry_days+'天临期':it.stock_level==='high'?'库存偏高':'正常'}</span></div><div class="inv-bar"><i style="width:${it.stock_level==='high'?85:it.status==='临期'?60:40}%;background:${color}"></i></div>`;
+    const inventoryState=it.status==='临期'?`${it.expiry_days}天临期`:it.stock_level==='high'?'库存偏高':'正常';
+    const priceText=it.price!==undefined&&it.price!==null&&it.price!==''?` · 售价 ${moneyPrefix}${it.price}`:'';
+    html+=`<div class="inv-row"><span class="dot" style="background:${color}"></span><span class="nm">${escapeHtml(it.name)}</span><span class="meta">${escapeHtml(it.stock)}${escapeHtml(it.unit||'')} · ${escapeHtml(inventoryState)}${escapeHtml(priceText)}</span></div><div class="inv-bar"><i style="width:${it.stock_level==='high'?85:it.status==='临期'?60:40}%;background:${color}"></i></div>`;
   });
   html+='</div>';
 
   // 天气
   const w=d.weather||{};
-  html+=`<div class="data-section"><div class="data-label"><span>${w.icon||'🌤️'} 天气</span></div><div style="font-size:12px;color:var(--ink2)">${w.description||w.condition||''} · ${w.temperature||''}°C</div></div>`;
+  html+=`<div class="data-section"><div class="data-label"><span>${escapeHtml(w.icon||'🌤️')} 天气</span></div><div style="font-size:12px;color:var(--ink2)">${escapeHtml(w.description||w.condition||'')} · ${escapeHtml(w.temperature||'')}°C</div></div>`;
 
   // 社区
   const c=d.community||{};
-  html+=`<div class="data-section"><div class="data-label"><span>🏘️ 社区画像</span><span class="tag tag-info">${c.type||''}</span></div><div class="community-stats"><div class="community-stat"><div class="v">${c.radius||'3km'}</div><div class="l">覆盖半径</div></div><div class="community-stat"><div class="v">${(c.peak_hour||'').split(' ')[0]}</div><div class="l">客流高峰</div></div></div></div>`;
+  html+=`<div class="data-section"><div class="data-label"><span>🏘️ 社区画像</span><span class="tag tag-info">${escapeHtml(c.type||'')}</span></div><div class="community-stats"><div class="community-stat"><div class="v">${escapeHtml(c.radius||'3km')}</div><div class="l">覆盖半径</div></div><div class="community-stat"><div class="v">${escapeHtml((c.peak_hour||'').split(' ')[0])}</div><div class="l">客流高峰</div></div></div></div>`;
 
   // 节日
   const f=d.festival||{};
   if(f.name){
-    html+=`<div class="data-section"><div class="data-label"><span>🎉 节日/节气</span><span class="tag tag-warn">${f.name}</span></div><div style="font-size:12px;color:var(--ink2)">${f.description||''}</div></div>`;
+    html+=`<div class="data-section"><div class="data-label"><span>🎉 节日/节气</span><span class="tag tag-warn">${escapeHtml(f.name)}</span></div><div style="font-size:12px;color:var(--ink2)">${escapeHtml(f.description||'')}</div></div>`;
   }
 
   // 通勤
   const cm=d.commute||{};
-  html+=`<div class="data-section"><div class="data-label"><span>🚶 通勤节奏</span></div><div style="font-size:12px;color:var(--ink2)">放学 ${cm.school_dismissal||''} · 下班 ${cm.office_offwork||''}</div></div>`;
+  html+=`<div class="data-section"><div class="data-label"><span>🚶 通勤节奏</span></div><div style="font-size:12px;color:var(--ink2)">放学 ${escapeHtml(cm.school_dismissal||'')} · 下班 ${escapeHtml(cm.office_offwork||'')}</div></div>`;
 
   // 客流
   const ft=d.foot_traffic||{};
-  html+=`<div class="data-section"><div class="data-label"><span>📊 预计客流</span></div><div style="font-size:18px;font-weight:700;color:var(--brand-d)">${ft.estimated||''}人</div></div>`;
+  html+=`<div class="data-section"><div class="data-label"><span>📊 预计客流</span></div><div style="font-size:18px;font-weight:700;color:var(--brand-d)">${escapeHtml(ft.estimated||'')}人</div></div>`;
 
   // 热销
   if(d.historical_hot_dishes&&d.historical_hot_dishes.length){
-    html+=`<div class="data-section"><div class="data-label"><span>🔥 历史热销菜</span></div><div style="font-size:12px;color:var(--ink2)">${d.historical_hot_dishes.join(' · ')}</div></div>`;
+    html+=`<div class="data-section"><div class="data-label"><span>🔥 历史热销菜</span></div><div style="font-size:12px;color:var(--ink2)">${escapeHtml(d.historical_hot_dishes.join(' · '))}</div></div>`;
   }
 
   document.getElementById('dataVizBody').innerHTML=html;
@@ -508,9 +639,11 @@ function renderDataViz(d){
 
 function resetEngine(){
   currentPlanId=null;
+  currentRawThinking='';
   document.getElementById('engineIdle').style.display='block';
   document.getElementById('statusLog').style.display='none';
   document.getElementById('statusLog').innerHTML='';
+  resetAgentTrace();
   document.getElementById('dualPanel').style.display='none';
   document.getElementById('thinkingBody').innerHTML='';
   document.getElementById('outputBody').innerHTML='';
@@ -524,11 +657,7 @@ function resetEngine(){
 function renderStaticMarkdown(elId,rawText,fallbackText){
   const el=document.getElementById(elId);
   const content=rawText||fallbackText;
-  if(typeof marked!=='undefined'){
-    el.innerHTML='<div class="md-content">'+marked.parse(content)+'</div>';
-  }else{
-    el.textContent=content;
-  }
+  renderSafeMarkdown(el,content);
   el.scrollTop=el.scrollHeight;
 }
 
@@ -542,16 +671,26 @@ function restoreRecommendation(plan){
   currentPlanId=plan.plan_id;
   currentResult=plan.result;
   recipeUrls=plan.recipe_urls||{};
+  currentRawThinking=plan.raw_thinking||'';
+  if(plan.input_context){
+    renderDataViz(plan.input_context);
+  }
 
   document.getElementById('engineIdle').style.display='none';
   document.getElementById('statusLog').style.display='block';
-  document.getElementById('statusLog').innerHTML=`<div class="status-log" style="color:var(--brand-d)">📂 已恢复 ${plan.input_context?.store_info?.date||'当前日期'} 的历史推荐方案</div>`;
+  document.getElementById('statusLog').replaceChildren();
+  appendStatusRow(`已恢复 ${plan.input_context?.store_info?.date||'当前日期'} 的历史推荐方案`,{tone:'brand',icon:'📂'});
+  resetAgentTrace();
+  const savedTrace=plan.input_context?.operational_data?.agent_trace||[];
+  if(savedTrace.length){
+    savedTrace.forEach(renderAgentEvent);
+  }
   document.getElementById('dualPanel').style.display='flex';
   document.getElementById('panelThinking').style.display=thinkingEnabled?'':'none';
   document.getElementById('thinkingBadge').textContent=plan.raw_thinking?'历史推理':'无推理记录';
   document.getElementById('outputBadge').textContent='历史方案';
   if(thinkingEnabled){
-    renderStaticMarkdown('thinkingBody',plan.raw_thinking,'暂无保存的推理过程。');
+    renderStaticMarkdown('thinkingBody',currentRawThinking,'暂无保存的推理过程。');
   }
   renderStaticMarkdown(
     'outputBody',
@@ -592,6 +731,9 @@ function toggleThinking(){
     btn.classList.add('active');
     icon.textContent='🧠';label.textContent='深度思考';
     thinkingPanel.style.display='';
+    if(currentRawThinking&&!document.getElementById('thinkingBody').textContent.trim()){
+      renderStaticMarkdown('thinkingBody',currentRawThinking,'暂无保存的推理过程。');
+    }
   }else{
     btn.classList.remove('active');
     icon.textContent='⚡';label.textContent='标准模式';
@@ -601,6 +743,82 @@ function toggleThinking(){
 
 function togglePanel(id){
   document.getElementById(id).classList.toggle('collapsed');
+}
+
+function appendStatusRow(message,{tone='default',spinner=false,icon=''}={}){
+  const statusLog=document.getElementById('statusLog');
+  const row=document.createElement('div');
+  row.className='status-log';
+  const colors={brand:'var(--brand-d)',warn:'var(--amber)',error:'var(--red)'};
+  if(colors[tone]) row.style.color=colors[tone];
+  if(spinner){
+    const spinnerEl=document.createElement('span');
+    spinnerEl.className='spinner';
+    row.appendChild(spinnerEl);
+  }else if(icon){
+    const iconEl=document.createElement('span');
+    iconEl.textContent=icon;
+    row.appendChild(iconEl);
+  }
+  const text=document.createElement('span');
+  text.textContent=String(message??'');
+  row.appendChild(text);
+  statusLog.appendChild(row);
+  statusLog.scrollTop=statusLog.scrollHeight;
+  return row;
+}
+
+function resetAgentTrace(){
+  agentEventNodes.clear();
+  document.getElementById('agentTraceList').replaceChildren();
+  document.getElementById('agentTrace').style.display='none';
+  document.getElementById('agentTrace').classList.remove('collapsed');
+  document.getElementById('agentTraceBadge').textContent='等待执行';
+}
+
+function renderAgentEvent(evt){
+  if(!evt||!evt.id) return;
+  const panel=document.getElementById('agentTrace');
+  const list=document.getElementById('agentTraceList');
+  panel.style.display='block';
+
+  let node=agentEventNodes.get(evt.id);
+  if(!node){
+    const row=document.createElement('div');
+    row.className=`agent-event ${evt.kind==='tool'?'tool':'step'}`;
+    const stateIcon=document.createElement('span');
+    stateIcon.className='state-icon';
+    const body=document.createElement('div');
+    const label=document.createElement('div');
+    label.className='agent-label';
+    const detail=document.createElement('div');
+    detail.className='agent-detail';
+    const meta=document.createElement('div');
+    meta.className='agent-meta';
+    body.append(label,detail,meta);
+    row.append(stateIcon,body);
+    list.appendChild(row);
+    node={row,stateIcon,label,detail,meta,state:'running'};
+    agentEventNodes.set(evt.id,node);
+  }
+
+  node.state=evt.state||'running';
+  node.row.classList.remove('running','completed','failed');
+  node.row.classList.add(node.state);
+  node.stateIcon.textContent=node.state==='completed'?'✓':node.state==='failed'?'!':'…';
+  node.label.textContent=String(evt.label||evt.id);
+  node.detail.textContent=String(evt.detail||'');
+  const metaParts=[];
+  if(evt.tool_name) metaParts.push(evt.tool_name);
+  if(evt.source) metaParts.push(`来源: ${evt.source}`);
+  if(Number.isFinite(evt.duration_ms)) metaParts.push(`${evt.duration_ms}ms`);
+  node.meta.textContent=metaParts.join(' · ');
+
+  const states=Array.from(agentEventNodes.values()).map(item=>item.state);
+  const completed=states.filter(state=>state==='completed').length;
+  const failed=states.filter(state=>state==='failed').length;
+  document.getElementById('agentTraceBadge').textContent=failed?`${failed} 步失败`:completed===states.length?`${completed} 步完成`:`${completed}/${states.length} 完成`;
+  list.scrollTop=list.scrollHeight;
 }
 
 /* 将任意大小的 SSE 分片拆成稳定的逐字播放队列，完成后仅解析一次 Markdown。 */
@@ -628,11 +846,7 @@ function createStreamRenderer(elId){
 
   function finalize(){
     if(finalText===null) return;
-    if(typeof marked!=='undefined'){
-      el.innerHTML='<div class="md-content">'+marked.parse(finalText)+'</div>';
-    }else{
-      el.textContent=finalText;
-    }
+    renderSafeMarkdown(el,finalText);
     el.scrollTop=el.scrollHeight;
     const resolve=finishResolver;
     finishResolver=null;
@@ -681,6 +895,8 @@ async function generate(){
   // 显示引擎区
   document.getElementById('engineIdle').style.display='none';
   document.getElementById('statusLog').style.display='block';
+  document.getElementById('statusLog').replaceChildren();
+  resetAgentTrace();
   document.getElementById('dualPanel').style.display='flex';
   document.getElementById('panelThinking').style.display=showThinking?'':'none';
   document.getElementById('thinkingBody').innerHTML='';
@@ -696,6 +912,8 @@ async function generate(){
   const statusLog=document.getElementById('statusLog');
   let thinkingText='';
   let outputText='';
+  let terminalReceived=false;
+  currentRawThinking='';
   const thinkingRenderer=showThinking?createStreamRenderer('thinkingBody'):null;
   const outputRenderer=createStreamRenderer('outputBody');
 
@@ -705,6 +923,9 @@ async function generate(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({data:currentData,enable_thinking:showThinking}),
     });
+
+    if(!resp.ok) throw new Error(`生成请求失败 (${resp.status})`);
+    if(!resp.body) throw new Error('浏览器未收到流式响应');
 
     const reader=resp.body.getReader();
     const decoder=new TextDecoder();
@@ -724,8 +945,9 @@ async function generate(){
         try{
           const evt=JSON.parse(line.slice(6));
           if(evt.type==='status'){
-            statusLog.innerHTML+=`<div class="status-log"><span class="spinner"></span>${evt.content}</div>`;
-            statusLog.scrollTop=statusLog.scrollHeight;
+            appendStatusRow(evt.content,{spinner:true});
+          }else if(evt.type==='agent'){
+            renderAgentEvent(evt.content);
           }else if(evt.type==='thinking'&&showThinking){
             thinkingText+=evt.content;
             document.getElementById('thinkingBadge').textContent='思考中...';
@@ -735,10 +957,15 @@ async function generate(){
             document.getElementById('outputBadge').textContent='生成中...';
             outputRenderer.append(evt.content);
           }else if(evt.type==='done'){
+            terminalReceived=true;
             const result=evt.content;
             currentResult=result.result;
             recipeUrls=result.recipe_urls||{};
             currentPlanId=result.plan_id||null;
+            if(result.input_context){
+              renderDataViz(result.input_context);
+            }
+            currentRawThinking=thinkingText;
             // 让待播放文字完整显示后再切换到最终 Markdown，避免大段跳出。
             await Promise.all([
               showThinking?thinkingRenderer.finish(thinkingText):Promise.resolve(),
@@ -748,9 +975,14 @@ async function generate(){
             document.getElementById('outputBadge').textContent='完成';
             renderResult(result);
             document.getElementById('engineStatus').textContent='⏳ 待负责人确认';
-            statusLog.innerHTML+=`<div class="status-log" style="color:var(--amber)">⏳ ${result.mock_mode?'Mock模式':''} 方案已生成，等待负责人确认 · Memory: ${result.memory_count}条</div>`;
+            appendStatusRow(`${result.mock_mode?'Mock模式 · ':''}方案已生成，等待负责人确认 · Memory: ${result.memory_count}条`,{tone:'warn',icon:'⏳'});
           }else if(evt.type==='error'){
-            statusLog.innerHTML+=`<div class="status-log" style="color:var(--red)">❌ ${evt.content}</div>`;
+            terminalReceived=true;
+            await Promise.all([
+              showThinking?thinkingRenderer.finish(thinkingText):Promise.resolve(),
+              outputRenderer.finish(outputText),
+            ]);
+            appendStatusRow(evt.content,{tone:'error',icon:'❌'});
             document.getElementById('engineStatus').textContent='错误';
             if(showThinking) document.getElementById('thinkingBadge').textContent='错误';
             document.getElementById('outputBadge').textContent='错误';
@@ -758,8 +990,16 @@ async function generate(){
         }catch(e){}
       }
     }
+    if(!terminalReceived) throw new Error('生成流提前结束，未收到完成状态');
   }catch(e){
-    statusLog.innerHTML+=`<div class="status-log" style="color:var(--red)">❌ 连接失败: ${e.message}</div>`;
+    await Promise.all([
+      showThinking?thinkingRenderer.finish(thinkingText):Promise.resolve(),
+      outputRenderer.finish(outputText),
+    ]);
+    appendStatusRow(`连接失败: ${e.message}`,{tone:'error',icon:'❌'});
+    document.getElementById('engineStatus').textContent='错误';
+    if(showThinking) document.getElementById('thinkingBadge').textContent='错误';
+    document.getElementById('outputBadge').textContent='错误';
   }finally{
     generating=false;
     btn.disabled=false;
@@ -776,11 +1016,11 @@ function renderResult(data){
   document.getElementById('menuMeta').textContent=r.menus.length+'道菜 · 点击查看菜谱';
   document.getElementById('menuGrid').innerHTML=r.menus.map((d,i)=>`
     <div class="dish-card fade-up" style="animation-delay:${i*0.1}s" onclick="openRecipe(${i})">
-      <div class="dish-img">${d.emoji||'🍳'}</div>
+      <div class="dish-img">${escapeHtml(d.emoji||'🍳')}</div>
       <div class="dish-body">
-        <div class="dish-name">${d.dish}<span class="role">${d.role}</span></div>
-        <div class="dish-desc">${d.priority_reason||''}</div>
-        <div class="dish-price">¥${d.package_price}<span class="old">¥${d.original_price}</span></div>
+        <div class="dish-name">${escapeHtml(d.dish)}<span class="role">${escapeHtml(d.role)}</span></div>
+        <div class="dish-desc">${escapeHtml(d.priority_reason||'')}</div>
+        <div class="dish-price">¥${escapeHtml(d.package_price)}<span class="old">¥${escapeHtml(d.original_price)}</span></div>
       </div>
     </div>`).join('');
 
@@ -795,14 +1035,14 @@ function renderResult(data){
 function renderPackage(r){
   document.getElementById('pkgCard').style.display='block';
   document.getElementById('pkgCard').classList.add('fade-up');
-  let html=`<div class="pkg-main"><div class="pkg-title">${r.scenario_tag||''}</div></div>`;
+  let html=`<div class="pkg-main"><div class="pkg-title">${escapeHtml(r.scenario_tag||'')}</div></div>`;
   html+='<div class="pkg-items">';
   r.menus.forEach(d=>{
-    html+=`<div class="it"><span>${d.emoji||''} ${d.dish} (${d.role})</span><span>¥${d.package_price}</span></div>`;
+    html+=`<div class="it"><span>${escapeHtml(d.emoji||'')} ${escapeHtml(d.dish)} (${escapeHtml(d.role)})</span><span>¥${escapeHtml(d.package_price)}</span></div>`;
   });
   html+=`</div>`;
   if(r.cross_sell){
-    html+=`<div style="margin:12px 16px;padding:11px 13px;background:var(--warm-l);border:1px dashed var(--warm);border-radius:10px;font-size:12px">🔗 <b>连带推荐：</b>${r.cross_sell}</div>`;
+    html+=`<div style="margin:12px 16px;padding:11px 13px;background:var(--warm-l);border:1px dashed var(--warm);border-radius:10px;font-size:12px">🔗 <b>连带推荐：</b>${escapeHtml(r.cross_sell)}</div>`;
   }
   document.getElementById('pkgBody').innerHTML=html;
 }
@@ -811,10 +1051,10 @@ function renderReach(planId){
   document.getElementById('reachCard').style.display='block';
   document.getElementById('reachCard').classList.add('fade-up');
   document.getElementById('reachNav').innerHTML=`
-    <button class="reach-link" onclick="openChannelPage('/dmall-member', '${planId||''}')">
+    <button class="reach-link" data-plan-id="${escapeHtml(planId||'')}" onclick="openChannelPage('/dmall-member',this.dataset.planId)">
       <span class="nav-icon">📱</span><span class="nav-copy"><span class="nav-title">Dmall 会员 App</span><span class="nav-sub">查看今日会员推送方案</span></span><span class="nav-arrow">›</span>
     </button>
-    <button class="reach-link" onclick="openChannelPage('/store-dashboard', '${planId||''}')">
+    <button class="reach-link" data-plan-id="${escapeHtml(planId||'')}" onclick="openChannelPage('/store-dashboard',this.dataset.planId)">
       <span class="nav-icon">🏪</span><span class="nav-copy"><span class="nav-title">门店负责人决策大屏</span><span class="nav-sub">查看陈列、员工任务并确认执行</span></span><span class="nav-arrow">›</span>
     </button>`;
 }
@@ -832,10 +1072,10 @@ function renderValue(r){
   document.getElementById('valueCard').style.display='block';
   document.getElementById('valueCard').classList.add('fade-up');
   document.getElementById('valueGrid').innerHTML=`
-    <div class="kpi"><div class="k-label">♻️ 预计减损</div><div class="k-val good">${ve.loss_reduction||''}</div></div>
-    <div class="kpi"><div class="k-label">💰 客单价提升</div><div class="k-val up">${ve.ticket_lift||''}</div></div>
-    <div class="kpi"><div class="k-label">🛒 连带率</div><div class="k-val up">${ve.cross_sell_rate||''}</div></div>
-    <div class="kpi"><div class="k-label">📱 会员打开率</div><div class="k-val up">${ve.member_open_rate||''}</div></div>
+    <div class="kpi"><div class="k-label">♻️ 预计减损</div><div class="k-val good">${escapeHtml(ve.loss_reduction||'')}</div></div>
+    <div class="kpi"><div class="k-label">💰 客单价提升</div><div class="k-val up">${escapeHtml(ve.ticket_lift||'')}</div></div>
+    <div class="kpi"><div class="k-label">🛒 连带率</div><div class="k-val up">${escapeHtml(ve.cross_sell_rate||'')}</div></div>
+    <div class="kpi"><div class="k-label">📱 会员打开率</div><div class="k-val up">${escapeHtml(ve.member_open_rate||'')}</div></div>
     <div class="compare-chart"><div style="font-size:12.5px;font-weight:700;margin-bottom:8px">📊 传统打折 vs 场景化经营</div><div class="cc-bars">
       <div class="cc-bar"><span class="cc-l">临期售价</span><div class="cc-track"><div class="seg" style="width:50%;background:#94a3b8">5折</div><div class="seg" style="width:80%;background:var(--green)">8折</div></div></div>
       <div class="cc-bar"><span class="cc-l">连带件数</span><div class="cc-track"><div class="seg" style="width:25%;background:#94a3b8">1.1</div><div class="seg" style="width:80%;background:var(--green)">3.8</div></div></div>
@@ -851,16 +1091,16 @@ function openRecipe(idx){
   const recipe=d.recipe||{};
   const url=recipeUrls[d.dish]||'';
 
-  const ingredients=(d.ingredients||[]).map(ing=>`<tr><td>${ing.name}</td><td>${ing.amount}</td><td style="font-size:11px;color:var(--ink3)">${ing.note||''}</td></tr>`).join('');
-  const steps=(recipe.steps||[]).map(s=>`<li>${s}</li>`).join('');
+  const ingredients=(d.ingredients||[]).map(ing=>`<tr><td>${escapeHtml(ing.name)}</td><td>${escapeHtml(ing.amount)}</td><td style="font-size:11px;color:var(--ink3)">${escapeHtml(ing.note||'')}</td></tr>`).join('');
+  const steps=(recipe.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
 
   document.getElementById('recipeModalInner').innerHTML=`
     <button class="modal-close" onclick="closeRecipe()">✕</button>
-    <div class="rm-hero"><div class="rm-emoji">${d.emoji||'🍳'}</div><h2>${d.dish}</h2></div>
+    <div class="rm-hero"><div class="rm-emoji">${escapeHtml(d.emoji||'🍳')}</div><h2>${escapeHtml(d.dish)}</h2></div>
     <div class="rm-section"><h4>🥬 食材清单</h4><table class="rm-ingr-table">${ingredients}</table></div>
     <div class="rm-section"><h4>👩‍🍳 制作步骤</h4><ol class="rm-steps">${steps}</ol></div>
-    <div class="rm-section"><h4>💡 小贴士</h4><div class="rm-tips">${recipe.tips||''}</div></div>
-    ${url?`<div class="rm-qr"><div class="rm-qr-img" id="qrContainer"></div><div class="rm-qr-info"><h5>📱 扫码查看菜谱</h5><p>手机扫码即可打开云端菜谱页面，可收藏分享</p><div class="rm-qr-url">${url}</div></div></div>`:''}
+    <div class="rm-section"><h4>💡 小贴士</h4><div class="rm-tips">${escapeHtml(recipe.tips||'')}</div></div>
+    ${url?`<div class="rm-qr"><div class="rm-qr-img" id="qrContainer"></div><div class="rm-qr-info"><h5>📱 扫码查看菜谱</h5><p>手机扫码即可打开云端菜谱页面，可收藏分享</p><div class="rm-qr-url">${escapeHtml(url)}</div></div></div>`:''}
   `;
 
   // 使用 qrcodejs 生成二维码

@@ -12,6 +12,13 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Config:
     """全局配置"""
 
@@ -19,6 +26,22 @@ class Config:
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
     LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o")
+
+    # ---- MCP 经营数据 Agent ----
+    MCP_ENABLED: bool = _env_bool("MCP_ENABLED", False)
+    MCP_SERVER_URL: str = os.getenv(
+        "MCP_SERVER_URL", "http://127.0.0.1:8765/mcp"
+    )
+    MCP_AUTH_TOKEN: str = os.getenv("MCP_AUTH_TOKEN", "")
+    MCP_REQUIRED: bool = _env_bool("MCP_REQUIRED", True)
+    MCP_TIMEOUT_SECONDS: float = float(os.getenv("MCP_TIMEOUT_SECONDS", "10"))
+    MCP_MAX_RESPONSE_BYTES: int = int(
+        os.getenv("MCP_MAX_RESPONSE_BYTES", "1000000")
+    )
+    AGENT_SALES_WINDOW_DAYS: int = int(
+        os.getenv("AGENT_SALES_WINDOW_DAYS", "28")
+    )
+    AGENT_MAX_PRODUCTS: int = int(os.getenv("AGENT_MAX_PRODUCTS", "100"))
 
     # ---- 服务器 ----
     HOST: str = os.getenv("SERVER_HOST", "0.0.0.0")

@@ -1,0 +1,13 @@
+[project]
+name = "aifreshfoodassistant-mcp-dev"
+version = "0.1.0"
+description = "Read-only development MCP server backed by deterministic fake fresh-food data"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.27,<2",
+    "typing-extensions>=4.12",
+]
+
+[tool.uv]
+package = false
