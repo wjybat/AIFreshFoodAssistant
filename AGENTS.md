@@ -57,7 +57,7 @@
 
 - 未设置 `LLM_API_KEY` 会进入 Mock 模式，适合流程验证，不代表真实模型输出稳定性。
 - GLM-5.2 的 Chat Completions 思考开关是 `extra_body.thinking.type=enabled|disabled`，不是 `enable_thinking`；关闭深度思考时必须对智谱端点显式发送 `disabled`，因为该模型默认开启 Thinking。
-- `LLM_PROVIDER=auto` 只按官方域名识别供应商，不得仅凭 `glm-*` 模型名向第三方网关发送智谱扩展字段；OpenCode 使用 `opencode` 协议且不发送智谱扩展，其他第三方兼容网关默认使用 `generic`。
+- `LLM_PROVIDER=auto` 只按官方域名识别供应商，不得仅凭 `glm-*` 模型名向第三方网关发送智谱扩展字段；OpenCode 使用 `opencode` 协议，GLM-5.2 开启思考时只发送顶层 `reasoning_effort=high|max`，不得发送智谱 `thinking` 或旧 `enable_thinking` 扩展。其他第三方兼容网关默认使用 `generic`。
 - MCP Python SDK 使用稳定 `v1.x`，依赖范围保持 `mcp>=1.27,<2`；新服务优先使用 Streamable HTTP，不要改回旧 SSE transport。
 - 项目只允许调用 `get_inventory`、`get_sales_history`、`get_current_prices` 三个只读工具。门店 ID 必须来自请求作用域，销售窗口和商品数量必须有上限。
 - 开发假数据库与 MCP 服务位于根目录下的 `.tmp\AIFreshFoodAssistant-mcp-dev`；它使用独立环境，不得访问本项目的 `memory/memory.db`。必要 fixture 文件需要提交供其他开发者使用，但不得打入主应用发布包。

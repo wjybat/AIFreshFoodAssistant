@@ -29,6 +29,8 @@ from .skills import build_system_prompt, build_few_shot, build_user_prompt
 
 logger = logging.getLogger(__name__)
 ZHIPU_THINKING_MODELS = frozenset({"glm-5.2", "glm-5.1", "glm-5", "glm-4.7"})
+OPENCODE_REASONING_MODELS = frozenset({"glm-5.2"})
+OPENCODE_REASONING_EFFORTS = frozenset({"high", "max"})
 
 
 class LLMEngine:
@@ -254,6 +256,24 @@ class LLMEngine:
             if enable_thinking and model == "glm-5.2":
                 extra_body["reasoning_effort"] = config.LLM_REASONING_EFFORT
             kwargs["extra_body"] = extra_body
+        elif (
+            provider == "opencode"
+            and model in OPENCODE_REASONING_MODELS
+            and enable_thinking
+        ):
+            # OpenCode Go exposes GLM-5.2 reasoning through the standard
+            # OpenAI-compatible reasoning_effort field, with high/max tiers.
+            # extra_body keeps compatibility with the project's older allowed
+            # OpenAI SDK versions while merging this into the top-level JSON.
+            if config.LLM_REASONING_EFFORT not in OPENCODE_REASONING_EFFORTS:
+                allowed = ", ".join(sorted(OPENCODE_REASONING_EFFORTS))
+                raise ValueError(
+                    "LLM_REASONING_EFFORT must be one of "
+                    f"{allowed} for OpenCode GLM-5.2"
+                )
+            kwargs["extra_body"] = {
+                "reasoning_effort": config.LLM_REASONING_EFFORT
+            }
         elif provider == "legacy" and enable_thinking:
             kwargs["extra_body"] = {"enable_thinking": True}
         return kwargs

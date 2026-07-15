@@ -261,7 +261,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
   <div class="topbar-right">
     <div class="status-chip" id="statusChip"><span class="status-dot" id="statusDot"></span><span id="statusText">检测中...</span></div>
-    <button class="think-toggle active" id="thinkToggle" onclick="toggleThinking()">
+    <button class="think-toggle active" id="thinkToggle" onclick="toggleThinking()" title="开启时请求并显示模型推理；关闭时隐藏推理，部分网关仍可能在内部推理">
       <span class="think-icon" id="thinkIcon">🧠</span>
       <span id="thinkLabel">深度思考</span>
     </button>
