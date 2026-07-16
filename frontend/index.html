@@ -189,6 +189,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dish-desc{font-size:11px;color:var(--ink2);margin-top:4px}
 .dish-price{margin-top:6px;font-size:13px;font-weight:700;color:var(--red)}
 .dish-price .old{font-size:11px;color:var(--ink3);text-decoration:line-through;font-weight:400;margin-left:4px}
+.dish-actions{display:flex;margin-top:9px}
+.recipe-image-btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:7px 11px;border:1px solid rgba(13,139,138,.28);border-radius:8px;background:var(--brand-l);color:var(--brand-d);font-size:11px;font-weight:700;line-height:1.2;transition:.2s}
+.recipe-image-btn:hover{border-color:var(--brand);background:#d8f4f2}
+.recipe-image-btn:disabled{opacity:.65;cursor:wait;transform:none}
+.recipe-image-btn.is-loading::before{content:"";width:12px;height:12px;margin-right:6px;border:2px solid rgba(13,139,138,.25);border-top-color:var(--brand-d);border-radius:50%;animation:spin .8s linear infinite}
+.recipe-image-toolbar{display:flex;align-items:flex-end;gap:10px;margin:0 0 12px;padding:12px;border:1px solid rgba(13,139,138,.24);border-radius:11px;background:linear-gradient(135deg,#f0fdfa,var(--brand-l))}
+.recipe-image-field{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+.recipe-image-field span{font-size:11px;font-weight:700;color:var(--brand-d)}
+.recipe-image-field select{width:100%;height:38px;padding:0 32px 0 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:12px;outline:none}
+.recipe-image-field select:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(13,139,138,.1)}
+.recipe-image-primary{min-height:38px;padding:9px 16px;background:var(--brand);border-color:var(--brand);color:#fff;font-size:12px;box-shadow:0 5px 14px rgba(13,139,138,.2)}
+.recipe-image-primary:hover{background:var(--brand-d);color:#fff}
 
 /* ===== 场景包 ===== */
 .pkg-main{padding:14px 16px;background:linear-gradient(135deg,var(--brand-l),#f0fdfa)}
@@ -237,6 +249,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .rm-hero.has-poster{padding:0;background:#f8f3e9}
 .rm-hero .rm-poster{display:block;width:100%;max-height:560px;object-fit:contain;object-position:top;background:#f8f3e9}
 .rm-hero h2{font-size:22px;font-weight:800}
+.rm-image-action{display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--line2);background:#fff}
+.rm-image-action .recipe-image-btn{min-width:132px}
+.rm-image-action span{font-size:11px;color:var(--ink3)}
 .rm-section{padding:16px 24px;border-bottom:1px solid var(--line2)}
 .rm-section h4{font-size:14px;font-weight:700;margin-bottom:10px}
 .rm-ingr-table{width:100%;border-collapse:collapse}
@@ -324,6 +339,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   .flow-link.done::after{border-left-color:transparent;border-top-color:#4ade80}.flow-link.failed::after{border-left-color:transparent;border-top-color:#fca5a5}
   .flow-link .flow-particle{top:0;left:50%;margin:-1px 0 0 -3.5px}.flow-link.flowing .flow-particle{animation-name:linkParticleY}
   .value-grid{grid-template-columns:1fr}
+  .rm-image-action{align-items:stretch;flex-direction:column}.rm-image-action .recipe-image-btn{width:100%}
+  .recipe-image-toolbar{align-items:stretch;flex-direction:column}.recipe-image-primary{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.agent-trace *{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
 @keyframes dashFlowY{to{background-position:0 24px}}
@@ -396,6 +413,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
         </div>
         <div class="menu-out" id="menuOut">
           <div class="card-head" style="border:none;padding:6px 0 10px"><div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📋</div><h3>今日推荐菜单候选</h3><span class="sub" id="menuMeta"></span></div>
+          <div class="recipe-image-toolbar">
+            <label class="recipe-image-field"><span>选择要生成图片的菜品</span><select id="recipeImageSelect" onchange="updateRecipeImageToolbar()"></select></label>
+            <button type="button" class="recipe-image-btn recipe-image-primary" id="recipeImageToolbarBtn" onclick="generateSelectedRecipeImage(this,event)">🎨 生成菜谱图片</button>
+          </div>
           <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="dual-panel" id="dualPanel" style="display:none">
@@ -451,6 +472,7 @@ let recipeUrls={};
 let currentPlanId=null;
 let currentRawThinking='';
 let generating=false;
+const recipeImageGenerating=new Set();
 const agentFlowNodes=new Map();
 let agentFlowColumns=[];
 let agentFlowFocusFrame=null;
@@ -1280,6 +1302,13 @@ function renderResult(data){
   document.getElementById('menuOut').style.display='block';
   const imageCount=r.menus.filter(menu=>safeAssetUrl(menu.recipe_image_url)).length;
   document.getElementById('menuMeta').textContent=`${r.menus.length}道菜 · 点击查看菜谱${imageCount?` · ${imageCount}张海报`:''}`;
+  const recipeImageSelect=document.getElementById('recipeImageSelect');
+  const previousMenuIndex=Number(recipeImageSelect.value);
+  recipeImageSelect.innerHTML=r.menus.map((menu,index)=>`<option value="${index}">${escapeHtml(menu.dish||`菜品 ${index+1}`)}</option>`).join('');
+  if(Number.isInteger(previousMenuIndex)&&previousMenuIndex>=0&&previousMenuIndex<r.menus.length){
+    recipeImageSelect.value=String(previousMenuIndex);
+  }
+  updateRecipeImageToolbar();
   document.getElementById('menuGrid').innerHTML=r.menus.map((d,i)=>{
     const imageUrl=safeAssetUrl(d.recipe_image_url);
     const visual=imageUrl
@@ -1292,6 +1321,7 @@ function renderResult(data){
         <div class="dish-name">${escapeHtml(d.dish)}<span class="role">${escapeHtml(d.role)}</span></div>
         <div class="dish-desc">${escapeHtml(d.priority_reason||'')}</div>
         <div class="dish-price">¥${escapeHtml(d.package_price)}<span class="old">¥${escapeHtml(d.original_price)}</span></div>
+        <div class="dish-actions"><button type="button" class="recipe-image-btn" data-menu-index="${i}" onclick="generateRecipeImage(${i},this,event)">${imageUrl?'重新生成图片':'生成菜谱图片'}</button></div>
       </div>
     </div>`;
   }).join('');
@@ -1370,6 +1400,7 @@ function openRecipe(idx){
   document.getElementById('recipeModalInner').innerHTML=`
     <button class="modal-close" onclick="closeRecipe()">✕</button>
     <div class="rm-hero${recipeImageUrl?' has-poster':''}">${recipeImageUrl?`<img class="rm-poster" src="${escapeHtml(recipeImageUrl)}" alt="${escapeHtml(d.dish||'菜谱')}海报">`:`<div class="rm-emoji">${escapeHtml(d.emoji||'🍳')}</div><h2>${escapeHtml(d.dish)}</h2>`}</div>
+    <div class="rm-image-action"><button type="button" class="recipe-image-btn" data-menu-index="${idx}" onclick="generateRecipeImage(${idx},this,event)">${recipeImageUrl?'重新生成图片':'生成菜谱图片'}</button><span>根据当前菜名、食材和步骤生成专属海报</span></div>
     <div class="rm-section"><h4>🥬 食材清单</h4><table class="rm-ingr-table">${ingredients}</table></div>
     <div class="rm-section"><h4>👩‍🍳 制作步骤</h4><ol class="rm-steps">${steps}</ol></div>
     <div class="rm-section"><h4>💡 小贴士</h4><div class="rm-tips">${escapeHtml(recipe.tips||'')}</div></div>
@@ -1394,6 +1425,81 @@ function openRecipe(idx){
 
   document.getElementById('recipeModal').classList.add('show');
   document.body.style.overflow='hidden';
+}
+
+function setRecipeImageButtonState(idx,isLoading){
+  document.querySelectorAll(`.recipe-image-btn[data-menu-index="${idx}"]`).forEach(button=>{
+    button.disabled=isLoading;
+    button.classList.toggle('is-loading',isLoading);
+    const hasImage=Boolean(safeAssetUrl(currentResult?.menus?.[idx]?.recipe_image_url));
+    button.textContent=isLoading
+      ?'正在生成...'
+      :button.classList.contains('recipe-image-primary')
+        ?hasImage?'🎨 重新生成所选图片':'🎨 生成所选菜谱图片'
+        :hasImage?'重新生成图片':'生成菜谱图片';
+  });
+}
+
+function updateRecipeImageToolbar(){
+  const select=document.getElementById('recipeImageSelect');
+  const button=document.getElementById('recipeImageToolbarBtn');
+  if(!select||!button) return;
+  const idx=Number(select.value);
+  button.dataset.menuIndex=String(idx);
+  const hasImage=Boolean(safeAssetUrl(currentResult?.menus?.[idx]?.recipe_image_url));
+  button.textContent=hasImage?'🎨 重新生成所选图片':'🎨 生成所选菜谱图片';
+}
+
+function generateSelectedRecipeImage(button,event){
+  const idx=Number(document.getElementById('recipeImageSelect')?.value);
+  if(!Number.isInteger(idx)) return;
+  return generateRecipeImage(idx,button,event);
+}
+
+async function generateRecipeImage(idx,button,event){
+  event?.preventDefault();
+  event?.stopPropagation();
+  if(recipeImageGenerating.has(idx)) return;
+  if(!currentPlanId){
+    alert('当前方案尚未保存，请先生成完整方案。');
+    return;
+  }
+  const dish=currentResult?.menus?.[idx]?.dish;
+  if(!dish){
+    alert('未找到指定菜品。');
+    return;
+  }
+
+  const requestedPlanId=currentPlanId;
+  recipeImageGenerating.add(idx);
+  setRecipeImageButtonState(idx,true);
+  document.getElementById('engineStatus').textContent=`正在生成「${dish}」菜谱图片...`;
+
+  try{
+    const response=await fetch(`/api/recommendations/${encodeURIComponent(requestedPlanId)}/menus/${idx}/image`,{
+      method:'POST',
+      headers:{'Accept':'application/json'}
+    });
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(payload.detail||`图片生成失败（HTTP ${response.status}）`);
+
+    if(currentPlanId===requestedPlanId){
+      currentResult=payload.result;
+      recipeUrls=payload.recipe_urls||recipeUrls;
+      renderResult({plan_id:currentPlanId,result:currentResult});
+      if(document.getElementById('recipeModal').classList.contains('show')){
+        openRecipe(idx);
+      }
+      document.getElementById('engineStatus').textContent=`✅ 「${dish}」菜谱图片已生成`;
+    }
+  }catch(error){
+    console.error('generateRecipeImage error:',error);
+    document.getElementById('engineStatus').textContent=`❌ 「${dish}」图片生成失败`;
+    alert(error.message||'菜谱图片生成失败，请稍后重试。');
+  }finally{
+    recipeImageGenerating.delete(idx);
+    setRecipeImageButtonState(idx,false);
+  }
 }
 
 function closeRecipe(){

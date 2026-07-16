@@ -57,6 +57,7 @@ class LLMEngine:
             max_products=config.AGENT_MAX_PRODUCTS,
         )
         self.recipe_image_generator = RecipeImageGenerator()
+        self._recipe_image_locks: dict[str, asyncio.Lock] = {}
 
         if not config.mock_mode:
             try:
@@ -72,6 +73,62 @@ class LLMEngine:
     @property
     def is_real_mode(self) -> bool:
         return self.client is not None
+
+    async def generate_recipe_image(self, plan_id: str, menu_index: int) -> dict:
+        """Generate and persist a poster for one selected dish in a saved plan."""
+        if menu_index < 0:
+            raise ValueError("菜品序号必须大于或等于 0")
+        if not self.recipe_image_generator.enabled:
+            raise RecipeImageError("菜谱图片生成功能未启用")
+
+        lock = self._recipe_image_locks.setdefault(plan_id, asyncio.Lock())
+        async with lock:
+            plan = self.memory.get_recommendation(plan_id)
+            if plan is None:
+                raise LookupError("推荐方案不存在或已被清理")
+
+            result = plan.get("result") or {}
+            menus = result.get("menus")
+            if not isinstance(menus, list) or menu_index >= len(menus):
+                raise ValueError("指定菜品不存在")
+            menu = menus[menu_index]
+            if not isinstance(menu, dict) or not menu.get("dish"):
+                raise ValueError("指定菜品数据不完整")
+
+            input_context = plan.get("input_context") or {}
+            store_name = str(
+                (input_context.get("store_info") or {}).get("store_name")
+                or "AI社区超市"
+            )
+            image_result = await self.recipe_image_generator.generate_one(
+                menu,
+                index=menu_index,
+                store_name=store_name,
+                scenario_tag=str(result.get("scenario_tag") or ""),
+                filename_stem=f"recipe_{plan_id}_{menu_index}",
+            )
+            if not image_result.image_url:
+                raise RecipeImageError(
+                    image_result.error or "菜谱图片生成未返回可用图片"
+                )
+
+            updated = self.memory.update_pending_recommendation_menu_image(
+                plan_id,
+                menu_index=menu_index,
+                expected_dish=str(menu["dish"]),
+                image_url=image_result.image_url,
+            )
+            if updated is None:
+                raise LookupError("推荐方案不存在或已被清理")
+
+            return {
+                "plan_id": plan_id,
+                "menu_index": menu_index,
+                "dish": str(menu["dish"]),
+                "recipe_image_url": image_result.image_url,
+                "result": updated["result"],
+                "recipe_urls": updated["recipe_urls"],
+            }
 
     async def generate(self, input_data: dict, enable_thinking: bool = True) -> AsyncGenerator[str, None]:
         """
@@ -159,7 +216,10 @@ class LLMEngine:
                 return
 
             # ===== Step 6: 菜谱图片生成 =====
-            if self.recipe_image_generator.enabled:
+            if (
+                self.recipe_image_generator.enabled
+                and config.IMAGE_AUTO_GENERATION_ENABLED
+            ):
                 yield self._sse("status", "正在生成菜谱图片（参考版式 + 菜谱内容）...")
                 store_name = str(
                     (working_input.get("store_info") or {}).get("store_name")
@@ -547,18 +607,35 @@ class LLMEngine:
 
         for i, menu in enumerate(result.get("menus", [])):
             dish_name = menu.get("dish", f"dish_{i}")
-            recipe = menu.get("recipe", {})
-            # 文件名只用ASCII，避免URL含中文导致二维码编码过长
-            filename = f"recipe_{i}.html"
-            filepath = config.RECIPES_DIR / filename
-
-            html = self._build_recipe_html(menu, store_name, result.get("scenario_tag", ""))
-            filepath.write_text(html, encoding="utf-8")
-
-            recipe_url = f"{config.SERVER_URL}/recipes/{filename}"
-            recipe_urls[dish_name] = recipe_url
+            recipe_urls[dish_name] = self._deploy_recipe_page(
+                menu,
+                store_name=store_name,
+                scenario_tag=result.get("scenario_tag", ""),
+                index=i,
+            )
 
         return recipe_urls
+
+    def _deploy_recipe_page(
+        self,
+        menu: dict,
+        *,
+        store_name: str,
+        scenario_tag: str,
+        index: int,
+        filename_stem: str | None = None,
+    ) -> str:
+        """Deploy one recipe page and return its public URL."""
+        config.ensure_dirs()
+        safe_stem = RecipeImageGenerator._safe_filename_stem(
+            filename_stem,
+            fallback=f"recipe_{index}",
+        )
+        filename = f"{safe_stem}.html"
+        filepath = config.RECIPES_DIR / filename
+        html = self._build_recipe_html(menu, store_name, scenario_tag)
+        filepath.write_text(html, encoding="utf-8")
+        return f"{config.SERVER_URL.rstrip('/')}/recipes/{filename}"
 
     def _build_recipe_html(self, menu: dict, store_name: str, scenario_tag: str) -> str:
         """生成单道菜的独立 HTML 菜谱页面"""

@@ -73,6 +73,9 @@ class Config:
 
     # ---- 菜谱图片生成 ----
     IMAGE_GENERATION_ENABLED: bool = _env_bool("IMAGE_GENERATION_ENABLED", True)
+    IMAGE_AUTO_GENERATION_ENABLED: bool = _env_bool(
+        "IMAGE_AUTO_GENERATION_ENABLED", False
+    )
     IMAGE_GENERATION_REQUIRED: bool = _env_bool("IMAGE_GENERATION_REQUIRED", False)
     IMAGE_API_BASE_URL: str = os.getenv(
         "IMAGE_API_BASE_URL", "http://23.238.4.238:8317/v1"

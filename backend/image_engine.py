@@ -6,6 +6,8 @@ import base64
 import binascii
 import json
 import logging
+import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -50,6 +52,45 @@ class RecipeImageGenerator:
         if not self.enabled or not menus:
             return []
 
+        indexed_menus = [(index, menu, None) for index, menu in enumerate(menus)]
+        return await self._generate_indexed(
+            indexed_menus,
+            store_name=store_name,
+            scenario_tag=scenario_tag,
+        )
+
+    async def generate_one(
+        self,
+        menu: dict[str, Any],
+        *,
+        index: int,
+        store_name: str,
+        scenario_tag: str,
+        filename_stem: str,
+    ) -> RecipeImageResult:
+        """Generate one selected menu poster without renumbering it to index zero."""
+        if not self.enabled:
+            raise RecipeImageError("菜谱图片生成功能未启用")
+
+        results = await self._generate_indexed(
+            [(index, menu, filename_stem)],
+            store_name=store_name,
+            scenario_tag=scenario_tag,
+        )
+        if not results:
+            raise RecipeImageError("菜谱图片生成未返回结果")
+        return results[0]
+
+    async def _generate_indexed(
+        self,
+        indexed_menus: list[tuple[int, dict[str, Any], str | None]],
+        *,
+        store_name: str,
+        scenario_tag: str,
+    ) -> list[RecipeImageResult]:
+        if not indexed_menus:
+            return []
+
         reference_path = config.IMAGE_REFERENCE_PATH
         reference_error = self._validate_reference(reference_path)
         if reference_error:
@@ -61,7 +102,7 @@ class RecipeImageGenerator:
                     dish_name=str(menu.get("dish") or f"dish_{index}"),
                     error=reference_error,
                 )
-                for index, menu in enumerate(menus)
+                for index, menu, _filename_stem in indexed_menus
             ]
 
         reference_bytes = reference_path.read_bytes()
@@ -70,7 +111,7 @@ class RecipeImageGenerator:
 
         async def run_with(client: httpx.AsyncClient) -> list[RecipeImageResult]:
             tasks = [
-                self._generate_one(
+                self._generate_one_request(
                     client,
                     semaphore,
                     index=index,
@@ -80,8 +121,9 @@ class RecipeImageGenerator:
                     reference_path=reference_path,
                     reference_bytes=reference_bytes,
                     reference_mime=reference_mime,
+                    filename_stem=filename_stem,
                 )
-                for index, menu in enumerate(menus)
+                for index, menu, filename_stem in indexed_menus
             ]
             results = list(await asyncio.gather(*tasks))
             failures = [item for item in results if item.error]
@@ -108,7 +150,7 @@ class RecipeImageGenerator:
         ) as client:
             return await run_with(client)
 
-    async def _generate_one(
+    async def _generate_one_request(
         self,
         client: httpx.AsyncClient,
         semaphore: asyncio.Semaphore,
@@ -120,6 +162,7 @@ class RecipeImageGenerator:
         reference_path: Path,
         reference_bytes: bytes,
         reference_mime: str,
+        filename_stem: str | None,
     ) -> RecipeImageResult:
         dish_name = str(menu.get("dish") or f"dish_{index}")
         prompt = self._build_prompt(
@@ -144,12 +187,16 @@ class RecipeImageGenerator:
                 raise RecipeImageError("接口返回的图片超过大小限制")
 
             config.ensure_dirs()
-            filename = f"recipe_{index}.{extension}"
+            stem = self._safe_filename_stem(filename_stem, fallback=f"recipe_{index}")
+            filename = f"{stem}.{extension}"
             target = config.RECIPES_DIR / filename
             temporary = target.with_suffix(target.suffix + ".tmp")
             temporary.write_bytes(image_bytes)
             temporary.replace(target)
-            image_url = f"{config.SERVER_URL.rstrip('/')}/recipes/{filename}"
+            image_url = (
+                f"{config.SERVER_URL.rstrip('/')}/recipes/{filename}"
+                f"?v={time.time_ns()}"
+            )
             return RecipeImageResult(index, dish_name, image_url=image_url)
         except Exception as exc:
             message = str(exc) or exc.__class__.__name__
@@ -372,3 +419,8 @@ class RecipeImageGenerator:
         if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
             return "webp"
         return None
+
+    @staticmethod
+    def _safe_filename_stem(value: str | None, *, fallback: str) -> str:
+        stem = re.sub(r"[^A-Za-z0-9_-]+", "_", str(value or "")).strip("_-")
+        return (stem or fallback)[:120]
