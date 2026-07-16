@@ -43,8 +43,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 /* ===== 布局 ===== */
 .app{max-width:1640px;margin:0 auto;padding:18px 20px 40px}
-.grid{display:grid;grid-template-columns:320px minmax(0,1fr) 360px;gap:16px;align-items:start}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr) 340px;gap:16px;align-items:start}
 .col{display:flex;flex-direction:column;gap:16px;min-width:0}
+/* Memory 和价值预估限高，不拉到页面最底部 */
+#memoryCard .card-body{max-height:calc(100vh - 250px);overflow-y:auto}
+.value-card .value-grid{max-height:calc(100vh - 250px);overflow-y:auto}
 
 /* ===== 卡片 ===== */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
@@ -63,25 +66,32 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .data-file-btn .f-name{flex:1}
 .data-file-btn .f-type{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--brand);color:#fff}
 
-/* ===== 数据可视化 ===== */
-.data-section{padding:11px 0;border-bottom:1px dashed var(--line2)}
-.data-section:last-child{border-bottom:none}
-.data-label{font-size:12px;color:var(--ink2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
-.data-label .tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600}
+/* ===== 数据可视化（宽列双栏布局） ===== */
+#dataVizBody{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+#dataVizBody .data-section{padding:10px 0;border-bottom:1px dashed var(--line2)}
+#dataVizBody .data-section:last-child{border-bottom:none}
+#dataVizBody .data-section.full-row{grid-column:1/-1}
+.data-label{font-size:13px;color:var(--ink2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.data-label .tag{font-size:11px;padding:2px 7px;border-radius:5px;font-weight:600}
 .tag-danger{background:var(--red-l);color:#dc2626}
 .tag-warn{background:var(--amber-l);color:#b45309}
 .tag-ok{background:var(--green-l);color:#16a34a}
 .tag-info{background:var(--blue-l);color:#2563eb}
-.inv-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0}
+.inv-row{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0}
 .inv-row .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.inv-row .nm{flex:1;font-weight:500}
-.inv-row .meta{font-size:11px;color:var(--ink3)}
+.inv-row .nm{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inv-row .meta{font-size:12px;color:var(--ink3);flex-shrink:0}
 .inv-bar{height:4px;background:var(--line2);border-radius:3px;margin-top:2px;overflow:hidden}
 .inv-bar i{display:block;height:100%;border-radius:3px}
-.community-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
-.community-stat{background:var(--line2);border-radius:9px;padding:9px 10px}
-.community-stat .v{font-size:17px;font-weight:700;color:var(--brand-d)}
-.community-stat .l{font-size:10.5px;color:var(--ink3);margin-top:1px}
+.inventory-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:6px;border-top:1px dashed var(--line2)}
+.inventory-pager button{width:26px;height:24px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--brand-d);font-size:16px;line-height:1}
+.inventory-pager button:hover:not(:disabled){background:var(--brand-l);border-color:var(--brand)}
+.inventory-pager button:disabled{color:var(--ink3);cursor:not-allowed}
+.inventory-pager span{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.community-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.community-stat{background:var(--line2);border-radius:8px;padding:8px 9px}
+.community-stat .v{font-size:16px;font-weight:700;color:var(--brand-d)}
+.community-stat .l{font-size:11px;color:var(--ink3);margin-top:1px}
 
 /* ===== AI 推理区 ===== */
 .engine-card{min-height:300px}
@@ -211,20 +221,21 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .value-card{margin-top:0}
 .value-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}
 .value-card .kpi{padding:12px}
-.value-card .kpi .k-val{font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+.value-card .kpi .k-val{font-size:15px;line-height:1.25;overflow-wrap:anywhere}
 .value-card .compare-chart{grid-column:1/-1;padding:12px}
-.kpi{background:var(--line2);border-radius:12px;padding:14px}
-.kpi .k-label{font-size:11.5px;color:var(--ink2)}
-.kpi .k-val{font-size:24px;font-weight:800;margin-top:6px;line-height:1}
+.kpi{background:var(--line2);border-radius:10px;padding:12px}
+.kpi .k-label{font-size:11px;color:var(--ink2);display:flex;align-items:center;gap:4px}
+.kpi .k-val{font-size:15px;font-weight:700;margin-top:5px;line-height:1.2}
 .kpi .k-val.good{color:var(--green)}
-.kpi .k-val.up{color:var(--red)}
-.kpi .k-sub{font-size:11px;color:var(--ink3);margin-top:5px}
-.compare-chart{background:var(--line2);border-radius:12px;padding:14px}
-.cc-bars{display:flex;flex-direction:column;gap:9px;margin-top:8px}
-.cc-bar{display:flex;align-items:center;gap:8px;font-size:11px}
-.cc-bar .cc-l{width:60px;color:var(--ink2)}
-.cc-bar .cc-track{flex:1;display:flex;gap:3px}
-.cc-bar .seg{height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:600}
+.kpi .k-val.up{color:#e8590c}
+.kpi .k-sub{font-size:10.5px;color:var(--ink3);margin-top:4px}
+.compare-chart{background:var(--line2);border-radius:10px;padding:12px}
+.compare-chart .cc-title{font-size:11.5px;font-weight:700;margin-bottom:6px;color:var(--ink2)}
+.cc-bars{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.cc-bar{display:flex;align-items:center;gap:8px;font-size:10.5px}
+.cc-bar .cc-l{width:56px;color:var(--ink2);flex-shrink:0}
+.cc-bar .cc-track{flex:1;display:flex;gap:3px;min-width:0}
+.cc-bar .seg{height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9.5px;color:#fff;font-weight:600;overflow:hidden;white-space:nowrap;padding:0 4px}
 
 /* ===== 菜谱弹窗 ===== */
 .modal-overlay{position:fixed;inset:0;background:rgba(10,20,40,.55);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
@@ -264,54 +275,57 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .think-toggle.active{background:rgba(99,102,241,.25);border-color:rgba(99,102,241,.4);color:#c7d2fe}
 .think-toggle .think-icon{font-size:14px}
 
-/* ===== 双面板思维链 ===== */
+/* ===== 双面板思维链（浅色主题） ===== */
 .dual-panel{display:flex;flex-direction:column;gap:12px;margin:10px auto 0;min-width:0;width:100%;max-width:900px}
 .panel-thinking,.panel-output{min-width:0;max-width:100%}
-.panel-thinking{background:#1e1b2e;border:1px solid #312e4f;border-radius:12px;overflow:hidden}
-.panel-thinking-head{padding:10px 14px;background:#2d2a4a;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
-.panel-thinking-head h4{font-size:12.5px;color:#a78bfa;font-weight:700}
-.panel-thinking-head .badge{font-size:10px;padding:2px 8px;border-radius:5px;background:#4c1d95;color:#ddd6fe;font-weight:600;margin-left:auto}
-.panel-thinking-head .arrow{color:#6b7280;transition:.2s;font-size:12px}
+.panel-thinking{background:#f4f5f7;border:1px solid #d8dbe2;border-radius:12px;overflow:hidden}
+.panel-thinking-head{padding:10px 14px;background:#e8eaf0;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.panel-thinking-head h4{font-size:12.5px;color:#5b3eff;font-weight:700}
+.panel-thinking-head .badge{font-size:10px;padding:2px 8px;border-radius:5px;background:#edeaff;color:#5b3eff;font-weight:600;margin-left:auto}
+.panel-thinking-head .arrow{color:#888;transition:.2s;font-size:12px}
 .panel-thinking.collapsed .arrow{transform:rotate(-90deg)}
-.panel-thinking-body{padding:14px 16px;max-height:350px;overflow:auto;overflow-wrap:anywhere;font-size:12.5px;line-height:1.7;color:#c4b5fd;font-family:"Cascadia Code","Fira Code",Consolas,monospace}
+.panel-thinking-body{padding:14px 16px;max-height:350px;overflow:auto;overflow-wrap:anywhere;font-size:13px;line-height:1.7;color:#3a3a4a;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
 .panel-thinking.collapsed .panel-thinking-body{display:none}
-.panel-thinking-body::-webkit-scrollbar-thumb{background:#4c1d95}
-.panel-thinking-body .md-content{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#e0e0ff}
-.panel-thinking-body .md-content h1,.panel-thinking-body .md-content h2,.panel-thinking-body .md-content h3{color:#a78bfa;margin:8px 0 4px}
+.panel-thinking-body::-webkit-scrollbar-thumb{background:#bbb}
+.panel-thinking-body .md-content{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#2a2a3a}
+.panel-thinking-body .md-content h1,.panel-thinking-body .md-content h2,.panel-thinking-body .md-content h3{color:#5b3eff;margin:8px 0 4px}
 .panel-thinking-body .md-content p{margin:4px 0}
 .panel-thinking-body .md-content ul,.panel-thinking-body .md-content ol{margin:4px 0;padding-left:20px}
 .panel-thinking-body .md-content li{margin:2px 0}
-.panel-thinking-body .md-content code{background:#2d2a4a;padding:1px 5px;border-radius:4px;font-size:11px;color:#fbbf24}
-.panel-thinking-body .md-content pre{background:#1a1726;border-radius:8px;padding:10px;max-width:100%;overflow-x:auto;margin:6px 0}
-.panel-thinking-body .md-content pre code{background:none;padding:0;color:#e0e0ff}
-.panel-thinking-body .md-content strong{color:#c4b5fd}
-.panel-thinking-body .md-content blockquote{border-left:3px solid #6d28d9;padding-left:10px;margin:6px 0;color:#9ca3af}
+.panel-thinking-body .md-content code{background:#e0e0e8;padding:1px 5px;border-radius:4px;font-size:12px;color:#c040a0}
+.panel-thinking-body .md-content pre{background:#e8eaf0;border:1px solid #d0d3da;border-radius:8px;padding:10px;max-width:100%;overflow-x:auto;margin:6px 0}
+.panel-thinking-body .md-content pre code{background:none;padding:0;color:#3a3a4a}
+.panel-thinking-body .md-content strong{color:#1a1a2a}
+.panel-thinking-body .md-content blockquote{border-left:3px solid #aaa;padding-left:10px;margin:6px 0;color:#666}
 .streaming-content{white-space:pre-wrap;overflow-wrap:anywhere}
 .stream-cursor{display:inline-block;width:7px;height:1.1em;margin-left:2px;background:currentColor;vertical-align:-.18em;animation:blink .8s steps(1) infinite}
 
-.panel-output{background:#0f172a;border:1px solid #1e293b;border-radius:12px;overflow:hidden}
-.panel-output-head{padding:10px 14px;background:#1e293b;display:flex;align-items:center;gap:8px}
-.panel-output-head h4{font-size:12.5px;color:#67e8f9;font-weight:700}
-.panel-output-head .badge{font-size:10px;padding:2px 8px;border-radius:5px;background:#0e7490;color:#cffafe;font-weight:600;margin-left:auto}
-.panel-output-body{padding:14px 16px;max-height:450px;overflow:auto;overflow-wrap:anywhere;font-size:13px;line-height:1.7;color:#cbd5e1}
-.panel-output-body::-webkit-scrollbar-thumb{background:#334155}
-.panel-output-body .md-content h1,.panel-output-body .md-content h2,.panel-output-body .md-content h3{color:#f1f5f9;margin:10px 0 6px;font-weight:700}
+.panel-output{background:#f4f5f7;border:1px solid #d8dbe2;border-radius:12px;overflow:hidden}
+.panel-output-head{padding:10px 14px;background:#e8eaf0;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.panel-output-head h4{font-size:12.5px;color:#0891b2;font-weight:700}
+.panel-output-head .badge{font-size:10px;padding:2px 8px;border-radius:5px;background:#d0f0f4;color:#0891b2;font-weight:600;margin-left:auto}
+.panel-output-head .arrow{color:#888;transition:.2s;font-size:12px}
+.panel-output.collapsed .arrow{transform:rotate(-90deg)}
+.panel-output.collapsed .panel-output-body{display:none}
+.panel-output-body{padding:14px 16px;max-height:450px;overflow:auto;overflow-wrap:anywhere;font-size:13px;line-height:1.7;color:#2a2a3a}
+.panel-output-body::-webkit-scrollbar-thumb{background:#bbb}
+.panel-output-body .md-content h1,.panel-output-body .md-content h2,.panel-output-body .md-content h3{color:#1a1a2a;margin:10px 0 6px;font-weight:700}
 .panel-output-body .md-content h1{font-size:18px}.panel-output-body .md-content h2{font-size:16px}.panel-output-body .md-content h3{font-size:14px}
 .panel-output-body .md-content p{margin:6px 0}
 .panel-output-body .md-content ul,.panel-output-body .md-content ol{margin:6px 0;padding-left:22px}
 .panel-output-body .md-content li{margin:3px 0}
-.panel-output-body .md-content code{background:#1e293b;padding:1px 5px;border-radius:4px;font-size:12px;color:#fbbf24}
-.panel-output-body .md-content pre{background:#1a1726;border:1px solid #334155;border-radius:8px;padding:12px;max-width:100%;overflow-x:auto;margin:8px 0}
-.panel-output-body .md-content pre code{background:none;padding:0;color:#e2e8f0;font-size:12px}
-.panel-output-body .md-content strong{color:#f1f5f9}
-.panel-output-body .md-content blockquote{border-left:3px solid #0891b2;padding-left:10px;margin:6px 0;color:#94a3b8}
+.panel-output-body .md-content code{background:#e0e0e8;padding:1px 5px;border-radius:4px;font-size:12px;color:#c040a0}
+.panel-output-body .md-content pre{background:#e8eaf0;border:1px solid #d0d3da;border-radius:8px;padding:12px;max-width:100%;overflow-x:auto;margin:8px 0}
+.panel-output-body .md-content pre code{background:none;padding:0;color:#2a2a3a;font-size:12px}
+.panel-output-body .md-content strong{color:#1a1a2a}
+.panel-output-body .md-content blockquote{border-left:3px solid #0891b2;padding-left:10px;margin:6px 0;color:#666}
 .panel-output-body .md-content table{border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;margin:8px 0}
-.panel-output-body .md-content th,.panel-output-body .md-content td{border:1px solid #334155;padding:5px 8px;text-align:left;font-size:12px}
-.panel-output-body .md-content th{background:#1e293b;font-weight:600}
-.panel-output-body .streaming-content{color:#e2e8f0}
+.panel-output-body .md-content th,.panel-output-body .md-content td{border:1px solid #d0d3da;padding:5px 8px;text-align:left;font-size:12px}
+.panel-output-body .md-content th{background:#e8eaf0;font-weight:600}
+.panel-output-body .streaming-content{color:#2a2a3a}
 
 /* ===== 响应式 ===== */
-@media(max-width:1280px){.grid{grid-template-columns:1fr}.value-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1280px){.grid{grid-template-columns:1fr}.value-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#dataVizBody{grid-template-columns:1fr}}
 @media(max-width:700px){
   .agent-trace-head{align-items:flex-start;padding:11px 12px}.agent-trace-head .head-icon{width:28px;height:28px}.agent-trace-head .head-sub{display:none}.agent-trace-head .badge{margin-top:3px}.agent-trace-live{display:none}
   .agent-flow{min-height:0;max-height:520px;flex-direction:column;align-items:stretch;padding:22px 14px;overflow-x:hidden;overflow-y:auto}
@@ -353,15 +367,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 <div class="app">
 <div class="grid">
 
-  <!-- 左列：数据 -->
+  <!-- 左列：数据输入 + Memory -->
   <div class="col">
     <div class="card">
       <div class="card-head"><div class="h-icon" style="background:var(--blue-l);color:var(--blue)">📂</div><h3>数据输入</h3><span class="sub" id="dataFileLabel">未加载</span></div>
       <div class="card-body" id="dataSelectBody"></div>
-    </div>
-    <div class="card" id="dataVizCard" style="display:none">
-      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📊</div><h3>数据可视化</h3></div>
-      <div class="card-body" id="dataVizBody"></div>
     </div>
     <div class="card" id="memoryCard">
       <div class="card-head"><div class="h-icon" style="background:var(--purple-l);color:var(--purple)">🧩</div><h3>Memory 管理</h3><span class="sub" id="memCountLabel">-</span></div>
@@ -370,14 +380,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
           <button class="mem-btn" onclick="viewMemory()" style="flex:1;padding:8px;border-radius:8px;background:var(--line2);font-size:12px;font-weight:600">📋 查看样例</button>
           <button class="mem-btn" onclick="resetMemory()" style="flex:1;padding:8px;border-radius:8px;background:var(--red-l);color:var(--red);font-size:12px;font-weight:600">🔄 重置</button>
         </div>
-        <div id="memoryList" style="display:none;max-height:300px;overflow-y:auto"></div>
+        <div id="memoryList" style="display:none;overflow-y:auto"></div>
       </div>
     </div>
   </div>
 
-  <!-- 中列：AI引擎 -->
+  <!-- 中列：数据可视化 + AI引擎 -->
   <div class="col">
-    <div class="card engine-card">
+    <div class="card" id="dataVizCard" style="display:none">
+      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📊</div><h3>数据可视化</h3></div>
+      <div class="card-body" id="dataVizBody"></div>
+    </div>
+    <div class="card engine-card" style="flex:1">
       <div class="card-head"><div class="h-icon" style="background:var(--brand-l);color:var(--brand-d)">🧠</div><h3>LLM Agentic Workflow</h3><span class="sub" id="engineStatus">待命</span></div>
       <div class="card-body" id="engineBody">
         <div class="engine-idle" id="engineIdle">
@@ -406,8 +420,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
             <div class="panel-thinking-body" id="thinkingBody"></div>
           </div>
           <div class="panel-output" id="panelOutput">
-            <div class="panel-output-head">
-              <span>📄</span><h4>生成结果</h4><span class="badge" id="outputBadge">等待生成</span>
+            <div class="panel-output-head" onclick="togglePanel('panelOutput')">
+              <span>📄</span><h4>生成结果</h4><span class="badge" id="outputBadge">等待生成</span><span class="arrow">▼</span>
             </div>
             <div class="panel-output-body" id="outputBody"></div>
           </div>
@@ -416,12 +430,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
   </div>
 
-  <!-- 右列：场景包+触达+价值 -->
+  <!-- 右列：触达矩阵 + 价值预估 -->
   <div class="col">
-    <div class="card" id="pkgCard" style="display:none">
-      <div class="card-head"><div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📦</div><h3>场景包 · 今日主推</h3></div>
-      <div class="card-body" id="pkgBody"></div>
-    </div>
     <div class="card" id="reachCard" style="display:none">
       <div class="card-head"><div class="h-icon" style="background:var(--purple-l);color:var(--purple)">📡</div><h3>全渠道触达矩阵</h3><span class="sub">待负责人确认</span></div>
       <div class="reach-nav" id="reachNav"></div>
@@ -451,6 +461,9 @@ let recipeUrls={};
 let currentPlanId=null;
 let currentRawThinking='';
 let generating=false;
+let currentDisplayData=null;
+let inventoryPage=0;
+const inventoryPageSize=10;
 const agentFlowNodes=new Map();
 let agentFlowColumns=[];
 let agentFlowFocusFrame=null;
@@ -623,7 +636,7 @@ async function loadDataFiles(){
       return;
     }
     body.innerHTML='<div class="data-select">'+d.files.map(f=>
-      `<button class="data-file-btn" data-path="${escapeHtml(f.path)}" onclick="loadData(this.dataset.path,event)"><span class="f-icon">${f.type==='json'?'📋':'📊'}</span><span class="f-name">${escapeHtml(f.filename)}</span><span class="f-type">${escapeHtml(String(f.type||'').toUpperCase())}</span></button>`
+      `<button class="data-file-btn" data-path="${escapeHtml(f.path)}" onclick="loadData(this.dataset.path,event)"><span class="f-icon">📍</span><span class="f-name">${escapeHtml(f.label||f.filename)}</span></button>`
     ).join('')+'</div>';
   }catch(e){
     console.error('loadDataFiles error:',e);
@@ -638,8 +651,10 @@ async function loadData(path,evt){
     const r=await fetch(`/api/data/${encodeURIComponent(path)}`);
     const d=await r.json();
     currentData=d.data;
+    currentDisplayData=d.display;
+    inventoryPage=0;
     renderDataViz(d.display);
-    document.getElementById('dataFileLabel').textContent=path;
+    document.getElementById('dataFileLabel').textContent=dataLabel(currentData);
     document.getElementById('genBtn').disabled=false;
 
     // 重置引擎区
@@ -650,7 +665,20 @@ async function loadData(path,evt){
   }
 }
 
+function dataLabel(data){
+  const storeInfo=data?.store_info||{};
+  return [storeInfo.store_name,storeInfo.date].filter(Boolean).join(' · ')||'已加载';
+}
+
+function showInventoryPage(page){
+  const inventory=Array.isArray(currentDisplayData?.inventory)?currentDisplayData.inventory:[];
+  const totalPages=Math.max(1,Math.ceil(inventory.length/inventoryPageSize));
+  inventoryPage=Math.min(Math.max(page,0),totalPages-1);
+  renderDataViz(currentDisplayData||{});
+}
+
 function renderDataViz(d){
+  currentDisplayData=d;
   document.getElementById('dataVizCard').style.display='block';
   let html='';
   const inventory=Array.isArray(d.inventory)?d.inventory:[];
@@ -682,13 +710,20 @@ function renderDataViz(d){
   }
 
   // 库存
-  html+=`<div class="data-section"><div class="data-label"><span>📦 库存与临期预警</span><span class="tag ${sm.expiring_count>0?'tag-danger':'tag-ok'}">${escapeHtml(sm.expiring_count||0)}项临期</span></div>`;
-  inventory.forEach(it=>{
+  const totalPages=Math.max(1,Math.ceil(inventory.length/inventoryPageSize));
+  inventoryPage=Math.min(inventoryPage,totalPages-1);
+  const pageStart=inventoryPage*inventoryPageSize;
+  const displayedInventory=inventory.slice(pageStart,pageStart+inventoryPageSize);
+  html+=`<div class="data-section full-row"><div class="data-label"><span>📦 库存与临期预警</span><span class="tag ${sm.expiring_count>0?'tag-danger':'tag-ok'}">${escapeHtml(sm.expiring_count||0)}项临期</span></div>`;
+  displayedInventory.forEach(it=>{
     const color=it.status==='临期'?'var(--red)':it.stock_level==='high'?'var(--amber)':'var(--green)';
     const inventoryState=it.status==='临期'?`${it.expiry_days}天临期`:it.stock_level==='high'?'库存偏高':'正常';
     const priceText=it.price!==undefined&&it.price!==null&&it.price!==''?` · 售价 ${moneyPrefix}${it.price}`:'';
     html+=`<div class="inv-row"><span class="dot" style="background:${color}"></span><span class="nm">${escapeHtml(it.name)}</span><span class="meta">${escapeHtml(it.stock)}${escapeHtml(it.unit||'')} · ${escapeHtml(inventoryState)}${escapeHtml(priceText)}</span></div><div class="inv-bar"><i style="width:${it.stock_level==='high'?85:it.status==='临期'?60:40}%;background:${color}"></i></div>`;
   });
+  if(inventory.length>inventoryPageSize){
+    html+=`<div class="inventory-pager"><button type="button" onclick="showInventoryPage(${inventoryPage-1})" aria-label="上一页库存" ${inventoryPage===0?'disabled':''}>&lsaquo;</button><span>${pageStart+1}-${Math.min(pageStart+inventoryPageSize,inventory.length)} / ${inventory.length}</span><button type="button" onclick="showInventoryPage(${inventoryPage+1})" aria-label="下一页库存" ${inventoryPage===totalPages-1?'disabled':''}>&rsaquo;</button></div>`;
+  }
   html+='</div>';
 
   // 天气
@@ -711,7 +746,7 @@ function renderDataViz(d){
 
   // 客流
   const ft=d.foot_traffic||{};
-  html+=`<div class="data-section"><div class="data-label"><span>📊 预计客流</span></div><div style="font-size:18px;font-weight:700;color:var(--brand-d)">${escapeHtml(ft.estimated||'')}人</div></div>`;
+  html+=`<div class="data-section"><div class="data-label"><span>📊 预计客流</span></div><div style="font-size:15px;font-weight:700;color:var(--brand-d)">${escapeHtml(ft.estimated||'')}人</div></div>`;
 
   // 热销
   if(d.historical_hot_dishes&&d.historical_hot_dishes.length){
@@ -731,7 +766,6 @@ function resetEngine(){
   document.getElementById('outputBody').innerHTML='';
   document.getElementById('menuOut').style.display='none';
   document.getElementById('engineStatus').textContent='待命';
-  document.getElementById('pkgCard').style.display='none';
   document.getElementById('reachCard').style.display='none';
   document.getElementById('valueCard').style.display='none';
 }
@@ -1158,7 +1192,6 @@ async function generate(){
   document.getElementById('thinkingBody').innerHTML='';
   document.getElementById('outputBody').innerHTML='';
   document.getElementById('menuOut').style.display='none';
-  document.getElementById('pkgCard').style.display='none';
   document.getElementById('reachCard').style.display='none';
   document.getElementById('valueCard').style.display='none';
   document.getElementById('engineStatus').textContent='生成中...';
@@ -1218,6 +1251,7 @@ async function generate(){
             recipeUrls=result.recipe_urls||{};
             currentPlanId=result.plan_id||null;
             if(result.input_context){
+              inventoryPage=0;
               renderDataViz(result.input_context);
             }
             currentRawThinking=thinkingText;
@@ -1296,8 +1330,6 @@ function renderResult(data){
     </div>`;
   }).join('');
 
-  // 场景包
-  renderPackage(r);
   // 触达矩阵
   renderReach(data.plan_id);
   // 价值预估
@@ -1348,7 +1380,7 @@ function renderValue(r){
     <div class="kpi"><div class="k-label">💰 客单价提升</div><div class="k-val up">${escapeHtml(ve.ticket_lift||'')}</div></div>
     <div class="kpi"><div class="k-label">🛒 连带率</div><div class="k-val up">${escapeHtml(ve.cross_sell_rate||'')}</div></div>
     <div class="kpi"><div class="k-label">📱 会员打开率</div><div class="k-val up">${escapeHtml(ve.member_open_rate||'')}</div></div>
-    <div class="compare-chart"><div style="font-size:12.5px;font-weight:700;margin-bottom:8px">📊 传统打折 vs 场景化经营</div><div class="cc-bars">
+    <div class="compare-chart"><div class="cc-title">📊 传统打折 vs 场景化经营</div><div class="cc-bars">
       <div class="cc-bar"><span class="cc-l">临期售价</span><div class="cc-track"><div class="seg" style="width:50%;background:#94a3b8">5折</div><div class="seg" style="width:80%;background:var(--green)">8折</div></div></div>
       <div class="cc-bar"><span class="cc-l">连带件数</span><div class="cc-track"><div class="seg" style="width:25%;background:#94a3b8">1.1</div><div class="seg" style="width:80%;background:var(--green)">3.8</div></div></div>
       <div class="cc-bar"><span class="cc-l">客单价</span><div class="cc-track"><div class="seg" style="width:55%;background:#94a3b8">¥38</div><div class="seg" style="width:90%;background:var(--green)">¥62</div></div></div>

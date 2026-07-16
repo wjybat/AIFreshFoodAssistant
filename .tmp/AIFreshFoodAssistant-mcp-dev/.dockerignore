@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.log
+README.md
+smoke_test.py
+seed.py
+.git/

@@ -1,0 +1,40 @@
+services:
+  mcp-dev:
+    build:
+      context: ./.tmp/AIFreshFoodAssistant-mcp-dev
+      dockerfile: Dockerfile
+    image: aifreshfoodassistant-mcp-dev:latest
+    container_name: aifreshfoodassistant-mcp-dev
+    network_mode: host
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aifreshfoodassistant:latest
+    container_name: aifreshfoodassistant
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8000"
+      MCP_ENABLED: "true"
+      MCP_REQUIRED: "true"
+      MCP_SERVER_URL: http://127.0.0.1:8765/mcp
+    volumes:
+      - aifreshfood-data:/app/data
+      - aifreshfood-memory:/app/memory
+      - aifreshfood-recipes:/app/recipes
+    depends_on:
+      - mcp-dev
+
+volumes:
+  aifreshfood-data:
+  aifreshfood-memory:
+  aifreshfood-recipes:

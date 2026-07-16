@@ -4,3 +4,4 @@
 __pycache__/
 recipes/
 .env
+deploy/app.env

@@ -1,8 +1,8 @@
-# AIFreshFoodAssistant 开发数据 MCP
+# AIFreshFoodAssistant 门店经营数据 MCP
 
-这是一个位于主项目 `.tmp/` 目录中的共享开发辅助服务。它使用确定性假数据模拟门店库存、销售历史和价格快照，并通过 MCP 暴露只读工具。源码、种子、依赖锁和确定性 SQLite fixture 随仓库共享，本地虚拟环境与缓存保持忽略。
+这是一个位于主项目 `.tmp/` 目录中的共享门店经营数据服务。它通过 MCP 暴露只读库存、销售历史和价格快照；源码、种子、依赖锁和 SQLite 数据库随仓库共享，本地虚拟环境与缓存保持忽略。
 
-> 所有返回均标记为 `development-fake-sqlite`，不得当作生产数据或真实经营数据使用。
+> 所有 MCP 结果固定标记为 `store-operational-data`，用于当前门店经营分析与方案生成。该 SQLite 仍是仓库随附的种子 fixture；接入生产 ERP 前须替换为已授权的实际数据源。
 
 ## 隔离边界
 
@@ -17,16 +17,20 @@
 
 ## 确定性数据
 
-种子为 `20260715`，数据对齐主项目现有四个场景的门店日期、商品 ID、名称、库存、单位、价格和成本：
+种子为 `20260715`，数据对齐主项目四个场景的门店日期、核心商品、库存、单位、价格和成本；每个门店补齐至 50 个 SKU：
 
 | 门店 | 库存/价格日期 | 商品 |
 |---|---:|---:|
-| `STORE_001` 阳光社区超市·城东店 | `2026-07-09` | `P001`–`P008` |
-| `STORE_002` 阳光社区超市·CBD店 | `2026-07-12` | `P101`–`P108` |
-| `STORE_003` 阳光社区超市·家庭店 | `2026-07-13` | `P201`–`P208` |
-| `STORE_004` 阳光社区超市·北方店 | `2026-12-22` | `P301`–`P308` |
+| `STORE_001` 阳光社区超市·城东店 | `2026-07-09` | `P001`–`P050` |
+| `STORE_002` 阳光社区超市·CBD店 | `2026-07-12` | `P101`–`P150` |
+| `STORE_003` 阳光社区超市·家庭店 | `2026-07-13` | `P201`–`P250` |
+| `STORE_004` 阳光社区超市·北方店 | `2026-12-22` | `P301`–`P350` |
 
-每个门店有库存日期之前 42 天的确定性日销售与损耗数据。临期商品带有开发用促销价场景。
+每个门店有库存日期之前 42 天的日销售与损耗数据。临期商品带有促销价场景。`seed-products.json` 提供补齐 SKU 的商品目录；重建时可同步主应用的四份 JSON 场景：
+
+```powershell
+uv run python seed.py --force --sync-scenarios
+```
 
 ## 安装、生成与验证
 
@@ -49,7 +53,7 @@ uv run python smoke_test.py
 
 ```json
 {
-  "source": "development-fake-sqlite",
+  "source": "store-operational-data",
   "store_id": "STORE_001",
   "as_of_date": "2026-07-09",
   "units": "per-row; see rows[].unit",
@@ -63,7 +67,7 @@ uv run python smoke_test.py
 
 ```json
 {
-  "source": "development-fake-sqlite",
+  "source": "store-operational-data",
   "store_id": "STORE_001",
   "window": {"start_date": "2026-07-02", "end_date": "2026-07-08"},
   "currency": "CNY",
@@ -78,7 +82,7 @@ uv run python smoke_test.py
 
 ```json
 {
-  "source": "development-fake-sqlite",
+  "source": "store-operational-data",
   "store_id": "STORE_001",
   "as_of_date": "2026-07-09",
   "currency": "CNY",
@@ -98,7 +102,7 @@ uv run python smoke_test.py
 2. `get_inventory`
 3. `get_sales_history`
 4. `get_current_prices`
-5. 基于三类证据形成推荐，并明确指出数据是开发假数据
+5. 基于三类经营证据形成推荐
 
 ## stdio 启动（本地 agent 推荐）
 

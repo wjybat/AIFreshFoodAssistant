@@ -9,7 +9,7 @@ from typing import Any, Iterable, Literal
 from typing_extensions import TypedDict
 
 
-SourceName = Literal["development-fake-sqlite"]
+SourceName = Literal["store-operational-data"]
 
 
 class InventoryRow(TypedDict):
@@ -113,7 +113,7 @@ class DatasetInfoResponse(TypedDict):
 
 
 class FreshFoodRepository:
-    """Read-only access to the deterministic development dataset."""
+    """Read-only access to the store operational dataset."""
 
     def __init__(self, db_path: str | Path) -> None:
         self.db_path = Path(db_path).expanduser().resolve()
@@ -121,7 +121,7 @@ class FreshFoodRepository:
     def _connect(self) -> sqlite3.Connection:
         if not self.db_path.is_file():
             raise FileNotFoundError(
-                f"Development database not found at {self.db_path}. Run `uv run python seed.py --force`."
+                f"Operational database not found at {self.db_path}. Run `uv run python seed.py --force`."
             )
         connection = sqlite3.connect(f"{self.db_path.as_uri()}?mode=ro", uri=True)
         connection.row_factory = sqlite3.Row
@@ -182,7 +182,7 @@ class FreshFoodRepository:
                 )
             }
         return {
-            "source": "development-fake-sqlite",
+            "source": "store-operational-data",
             "read_only": True,
             "database_path": str(self.db_path),
             "metadata": metadata,
@@ -212,7 +212,7 @@ class FreshFoodRepository:
                     """
                 ).fetchall()
             )
-        return {"source": "development-fake-sqlite", "rows": rows}  # type: ignore[return-value]
+        return {"source": "store-operational-data", "rows": rows}  # type: ignore[return-value]
 
     def get_inventory(self, store_id: str, as_of_date: str) -> InventoryResponse:
         resolved_date = self._parse_date(as_of_date, "as_of_date").isoformat()
@@ -253,7 +253,7 @@ class FreshFoodRepository:
                     f"No inventory snapshot for {store_id} on {resolved_date}; available dates: {dates}"
                 )
         return {
-            "source": "development-fake-sqlite",
+            "source": "store-operational-data",
             "store_id": store_id,
             "as_of_date": resolved_date,
             "units": "per-row; see rows[].unit",
@@ -313,7 +313,7 @@ class FreshFoodRepository:
                     f"{bounds[0]} through {bounds[1]}"
                 )
         return {
-            "source": "development-fake-sqlite",
+            "source": "store-operational-data",
             "store_id": store_id,
             "window": {
                 "start_date": resolved_start.isoformat(),
@@ -379,7 +379,7 @@ class FreshFoodRepository:
                     f"No price snapshot for {store_id} on {resolved_date}; available dates: {dates}"
                 )
         return {
-            "source": "development-fake-sqlite",
+            "source": "store-operational-data",
             "store_id": store_id,
             "as_of_date": resolved_date,
             "currency": "CNY",

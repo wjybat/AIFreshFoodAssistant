@@ -17,6 +17,9 @@ EXPECTED_TOOLS = {
     "get_sales_history",
     "get_current_prices",
 }
+PRODUCTS_PER_STORE = 50
+TOTAL_PRODUCTS = 200
+SOURCE_NAME = "store-operational-data"
 
 
 async def main() -> None:
@@ -62,14 +65,17 @@ async def main() -> None:
         dataset = await session.call_tool("get_dataset_info", {})
         assert not dataset.isError
         assert dataset.structuredContent["read_only"] is True
+        assert dataset.structuredContent["source"] == SOURCE_NAME
         assert dataset.structuredContent["counts"]["stores"] == 4
+        assert dataset.structuredContent["counts"]["products"] == TOTAL_PRODUCTS
 
         inventory = await session.call_tool(
             "get_inventory",
             {"store_id": "STORE_001", "as_of_date": "2026-07-09"},
         )
         assert not inventory.isError
-        assert len(inventory.structuredContent["rows"]) == 8
+        assert inventory.structuredContent["source"] == SOURCE_NAME
+        assert len(inventory.structuredContent["rows"]) == PRODUCTS_PER_STORE
         assert inventory.structuredContent["rows"][0]["unit"]
 
         sales = await session.call_tool(
@@ -82,6 +88,7 @@ async def main() -> None:
             },
         )
         assert not sales.isError
+        assert sales.structuredContent["source"] == SOURCE_NAME
         assert len(sales.structuredContent["rows"]) == 7
         assert sales.structuredContent["currency"] == "CNY"
 
@@ -94,6 +101,7 @@ async def main() -> None:
             },
         )
         assert not prices.isError
+        assert prices.structuredContent["source"] == SOURCE_NAME
         assert len(prices.structuredContent["rows"]) == 2
         assert prices.structuredContent["currency"] == "CNY"
 
