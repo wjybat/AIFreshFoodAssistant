@@ -181,6 +181,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dish-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:.2s;cursor:pointer}
 .dish-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--brand)}
 .dish-img{height:80px;display:flex;align-items:center;justify-content:center;font-size:36px;background:linear-gradient(135deg,var(--brand-l),#f0fdfa)}
+.dish-img.has-image{height:150px;padding:0;background:#f8f3e9}
+.dish-img img{display:block;width:100%;height:100%;object-fit:cover;object-position:top}
 .dish-body{padding:10px 12px}
 .dish-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
 .dish-name .role{font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;background:var(--warm-l);color:var(--warm)}
@@ -232,6 +234,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .modal-close:hover{background:rgba(0,0,0,.15)}
 .rm-hero{padding:28px 24px 20px;text-align:center;background:linear-gradient(135deg,var(--brand-l),#f0fdfa);position:relative}
 .rm-hero .rm-emoji{font-size:56px;margin-bottom:8px}
+.rm-hero.has-poster{padding:0;background:#f8f3e9}
+.rm-hero .rm-poster{display:block;width:100%;max-height:560px;object-fit:contain;object-position:top;background:#f8f3e9}
 .rm-hero h2{font-size:22px;font-weight:800}
 .rm-section{padding:16px 24px;border-bottom:1px solid var(--line2)}
 .rm-section h4{font-size:14px;font-weight:700;margin-bottom:10px}
@@ -916,6 +920,15 @@ function updateAgentTraceSummary(){
   progress.parentElement.classList.toggle('failed',failed>0);
 }
 
+function safeAssetUrl(value){
+  try{
+    const url=new URL(String(value||''),window.location.origin);
+    return ['http:','https:'].includes(url.protocol)?url.href:'';
+  }catch(_error){
+    return '';
+  }
+}
+
 function focusRunningAgentNode(flow,nodeEl){
   if(agentFlowFocusFrame!==null) cancelAnimationFrame(agentFlowFocusFrame);
   agentFlowFocusFrame=requestAnimationFrame(()=>{
@@ -1026,8 +1039,17 @@ function renderWorkflowStatus(message){
   }else if(text.includes('正在解析结构化输出')){
     completeWorkflowStage('workflow-llm','模型输出流接收完成');
     startWorkflowStage('workflow-parse','解析结构化输出','校验菜单与经营方案字段');
-  }else if(text.includes('正在部署菜谱页面')){
+  }else if(text.includes('正在生成菜谱图片')){
     completeWorkflowStage('workflow-parse','结构化结果解析完成');
+    startWorkflowStage('workflow-image','生成菜谱图片','参考版式与每道菜的结构化菜谱');
+  }else if(text.includes('菜谱图片生成完成')){
+    completeWorkflowStage('workflow-image',text);
+  }else if(text.includes('正在部署菜谱页面')){
+    if(agentFlowNodes.get('workflow-image')?.state==='running'){
+      completeWorkflowStage('workflow-image','菜谱图片生成完成');
+    }else{
+      completeWorkflowStage('workflow-parse','结构化结果解析完成');
+    }
     startWorkflowStage('workflow-deploy','部署菜谱页面','生成独立菜谱页面与访问链接');
   }else if(text.includes('方案已生成，等待门店负责人确认')){
     completeWorkflowStage('workflow-deploy','菜谱页面部署完成');
@@ -1043,14 +1065,18 @@ function renderWorkflowStatus(message){
 function renderRestoredWorkflow(plan,savedTrace){
   renderAgentEvent({kind:'stage',id:'workflow-agent-start',state:'completed',label:'启动经营数据 Agent',detail:'已恢复经营数据上下文'});
   savedTrace.forEach(renderAgentEvent);
-  [
+  const stages=[
     ['workflow-memory','检索 Memory 历史样例','历史样例检索已完成'],
     ['workflow-prompt','组装生成 Prompt','Skills 与 Few-Shot 注入完成'],
     ['workflow-llm','调用 LLM 生成方案','模型生成已完成'],
     ['workflow-parse','解析结构化输出','结果契约校验完成'],
     ['workflow-deploy','部署菜谱页面','菜谱访问链接已生成'],
     ['workflow-save','保存待确认方案',recommendationStatus(plan)],
-  ].forEach(([id,label,detail])=>renderAgentEvent({kind:'stage',id,state:'completed',label,detail}));
+  ];
+  if((plan.result?.menus||[]).some(menu=>menu.recipe_image_url)){
+    stages.splice(4,0,['workflow-image','生成菜谱图片','菜谱海报已生成']);
+  }
+  stages.forEach(([id,label,detail])=>renderAgentEvent({kind:'stage',id,state:'completed',label,detail}));
 }
 
 /* 将任意大小的 SSE 分片拆成稳定的逐字播放队列，完成后仅解析一次 Markdown。 */
@@ -1252,16 +1278,23 @@ function renderResult(data){
   const r=data.result;
   // 菜单
   document.getElementById('menuOut').style.display='block';
-  document.getElementById('menuMeta').textContent=r.menus.length+'道菜 · 点击查看菜谱';
-  document.getElementById('menuGrid').innerHTML=r.menus.map((d,i)=>`
+  const imageCount=r.menus.filter(menu=>safeAssetUrl(menu.recipe_image_url)).length;
+  document.getElementById('menuMeta').textContent=`${r.menus.length}道菜 · 点击查看菜谱${imageCount?` · ${imageCount}张海报`:''}`;
+  document.getElementById('menuGrid').innerHTML=r.menus.map((d,i)=>{
+    const imageUrl=safeAssetUrl(d.recipe_image_url);
+    const visual=imageUrl
+      ?`<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(d.dish||'菜谱')}海报" loading="lazy">`
+      :escapeHtml(d.emoji||'🍳');
+    return `
     <div class="dish-card fade-up" style="animation-delay:${i*0.1}s" onclick="openRecipe(${i})">
-      <div class="dish-img">${escapeHtml(d.emoji||'🍳')}</div>
+      <div class="dish-img${imageUrl?' has-image':''}">${visual}</div>
       <div class="dish-body">
         <div class="dish-name">${escapeHtml(d.dish)}<span class="role">${escapeHtml(d.role)}</span></div>
         <div class="dish-desc">${escapeHtml(d.priority_reason||'')}</div>
         <div class="dish-price">¥${escapeHtml(d.package_price)}<span class="old">¥${escapeHtml(d.original_price)}</span></div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   // 场景包
   renderPackage(r);
@@ -1329,13 +1362,14 @@ function openRecipe(idx){
   const d=currentResult.menus[idx];
   const recipe=d.recipe||{};
   const url=recipeUrls[d.dish]||'';
+  const recipeImageUrl=safeAssetUrl(d.recipe_image_url);
 
   const ingredients=(d.ingredients||[]).map(ing=>`<tr><td>${escapeHtml(ing.name)}</td><td>${escapeHtml(ing.amount)}</td><td style="font-size:11px;color:var(--ink3)">${escapeHtml(ing.note||'')}</td></tr>`).join('');
   const steps=(recipe.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
 
   document.getElementById('recipeModalInner').innerHTML=`
     <button class="modal-close" onclick="closeRecipe()">✕</button>
-    <div class="rm-hero"><div class="rm-emoji">${escapeHtml(d.emoji||'🍳')}</div><h2>${escapeHtml(d.dish)}</h2></div>
+    <div class="rm-hero${recipeImageUrl?' has-poster':''}">${recipeImageUrl?`<img class="rm-poster" src="${escapeHtml(recipeImageUrl)}" alt="${escapeHtml(d.dish||'菜谱')}海报">`:`<div class="rm-emoji">${escapeHtml(d.emoji||'🍳')}</div><h2>${escapeHtml(d.dish)}</h2>`}</div>
     <div class="rm-section"><h4>🥬 食材清单</h4><table class="rm-ingr-table">${ingredients}</table></div>
     <div class="rm-section"><h4>👩‍🍳 制作步骤</h4><ol class="rm-steps">${steps}</ol></div>
     <div class="rm-section"><h4>💡 小贴士</h4><div class="rm-tips">${escapeHtml(recipe.tips||'')}</div></div>

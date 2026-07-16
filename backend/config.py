@@ -37,6 +37,13 @@ def _env_positive_int(name: str, default: int) -> int:
     return value
 
 
+def _env_positive_float(name: str, default: float) -> float:
+    value = float(os.getenv(name, str(default)))
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError(f"{name} must be a finite number greater than zero")
+    return value
+
+
 def _env_temperature(name: str, default: float) -> float:
     value = float(os.getenv(name, str(default)))
     if not math.isfinite(value) or not 0 <= value <= 2:
@@ -62,6 +69,29 @@ class Config:
         "LLM_REASONING_EFFORT",
         "max",
         {"max", "xhigh", "high", "medium", "low", "minimal", "none"},
+    )
+
+    # ---- 菜谱图片生成 ----
+    IMAGE_GENERATION_ENABLED: bool = _env_bool("IMAGE_GENERATION_ENABLED", True)
+    IMAGE_GENERATION_REQUIRED: bool = _env_bool("IMAGE_GENERATION_REQUIRED", False)
+    IMAGE_API_BASE_URL: str = os.getenv(
+        "IMAGE_API_BASE_URL", "http://23.238.4.238:8317/v1"
+    )
+    IMAGE_API_KEY: str = os.getenv("IMAGE_API_KEY", "").strip() or LLM_API_KEY
+    IMAGE_MODEL: str = os.getenv("IMAGE_MODEL", "gpt-image-2")
+    IMAGE_MODEL_QUERY_FALLBACK: bool = _env_bool(
+        "IMAGE_MODEL_QUERY_FALLBACK", True
+    )
+    IMAGE_SIZE: str = os.getenv("IMAGE_SIZE", "1024x1536")
+    IMAGE_QUALITY: str = _env_choice(
+        "IMAGE_QUALITY", "high", {"auto", "low", "medium", "high"}
+    )
+    IMAGE_TIMEOUT_SECONDS: float = _env_positive_float(
+        "IMAGE_TIMEOUT_SECONDS", 300
+    )
+    IMAGE_MAX_CONCURRENCY: int = _env_positive_int("IMAGE_MAX_CONCURRENCY", 2)
+    IMAGE_MAX_RESPONSE_BYTES: int = _env_positive_int(
+        "IMAGE_MAX_RESPONSE_BYTES", 20_000_000
     )
 
     # ---- MCP 经营数据 Agent ----
@@ -92,6 +122,9 @@ class Config:
     RECIPES_DIR: Path = BASE_DIR / os.getenv("RECIPES_DIR", "recipes")
     MEMORY_DB: Path = BASE_DIR / os.getenv("MEMORY_DB", "memory/memory.db")
     FRONTEND_DIR: Path = BASE_DIR / "frontend"
+    IMAGE_REFERENCE_PATH: Path = BASE_DIR / os.getenv(
+        "IMAGE_REFERENCE_PATH", "assets/recipe-card-reference.png"
+    )
 
     # ---- Memory ----
     MEMORY_TOP_K: int = 5  # 检索历史样例数量

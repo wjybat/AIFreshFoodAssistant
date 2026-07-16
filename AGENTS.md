@@ -2,8 +2,7 @@
 
 用户使用说明见 [README.md](README.md)。本文件记录后续开发 agent 必须遵守的项目约束与验证方式。
 
-## 运行与验证
-
+##
 - 当前 Windows 环境使用 `anaconda` 管理虚拟环境；不要假定裸 `python` 已安装项目依赖。
 - 没有正式自动化测试套件。启动服务后检查 `/api/health` 和相关 API，并用浏览器验证涉及的真实页面流程。
 - 涉及存储或删除的操作，应使用临时 SQLite 数据库或临时 `MemoryStore` 验证；不要为测试清除用户现有的 `memory/memory.db`。
