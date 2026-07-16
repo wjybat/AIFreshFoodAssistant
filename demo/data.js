@@ -311,8 +311,8 @@ const SCENARIOS = {
   },
 
   s3: {
-    name:'周末家庭', icon:'👨‍👩‍👧',
-    date:'2026-07-13 周日',
+    name:'三伏家庭', icon:'👨‍👩‍👧',
+    date:'2026-07-15 周三',
     weather:{icon:'⛅',text:'晴 25°C',desc:'宜聚餐·家庭烹饪需求强'},
     situation:{
       inventory:[
@@ -320,7 +320,7 @@ const SCENARIOS = {
         {name:'番茄',stock:'55kg',level:60,days:'2天临期',status:'danger'},
         {name:'鸡蛋',stock:'180盒',level:45,days:'正常',status:'ok'},
         {name:'紫菜',stock:'50包',level:30,days:'正常',status:'ok'},
-        {name:'大米',stock:'300袋',level:70,days:'周末热销',status:'ok'},
+        {name:'大米',stock:'300袋',level:70,days:'家庭装热销',status:'ok'},
         {name:'可乐',stock:'200瓶',level:80,days:'库存偏高',status:'warn'},
       ],
       community:{type:'家庭聚餐为主',radius:'3km',peak:'全天客流',office:'周边社区',kids:'学区房占比40%'},
@@ -330,7 +330,7 @@ const SCENARIOS = {
     reasoning:[
       {tag:'warn',tagText:'高库存',text:'检测到 <b>五花肉</b> 库存偏高 <span class="arrow">→</span> 匹配菜谱 <b>红烧肉</b>（家庭聚餐硬菜）'},
       {tag:'danger',tagText:'临期',text:'检测到 <b>番茄</b> 2 天临期 + 鸡蛋充足 <span class="arrow">→</span> 匹配菜谱 <b>番茄炒蛋</b>'},
-      {tag:'info',tagText:'场景',text:'周末晴朗 <b>家庭聚餐需求↑</b> + 可乐库存高 <span class="arrow">→</span> 联动 <b>可乐+大米</b> 家庭装'},
+      {tag:'info',tagText:'三伏',text:'三伏时节 <b>家庭清淡消暑需求↑</b> + 可乐库存高 <span class="arrow">→</span> 联动 <b>可乐+大米</b> 家庭装'},
       {tag:'ok',tagText:'客群',text:'家庭客群·全天客流 <span class="arrow">→</span> 推荐 <b>3-4人家庭套餐</b>，上午推送备菜'},
       {tag:'warn',tagText:'组合',text:'组合优化：红烧肉(硬菜)+番茄炒蛋+紫菜蛋花汤+大米 <span class="arrow">→</span> 家庭聚餐全套餐'},
     ],
@@ -432,7 +432,7 @@ const SCENARIOS = {
        }},
     ],
     package:{
-      title:'周末家庭聚餐 3-4人套餐',
+      title:'三伏家庭聚餐 3-4人套餐',
       emoji:'👨‍👩‍👧',
       now:68.8, old:89, save:'省 ¥20.2',
       items:[
@@ -446,12 +446,12 @@ const SCENARIOS = {
     },
     reach:{
       push:{title:'周末给家人做顿好的 🥩',body:'红烧肉+番茄炒蛋+紫菜蛋花汤，3-4人家庭聚餐套餐 ¥68.8，食材已配齐，周末在家露一手！加购可乐更划算～',cta:'查看家庭套餐',time:'10:00 推送 · 家庭客群'},
-      screen:{dish:'周末家庭聚餐套餐',sub:'3-4人份 · 在家露一手',steps:['五花肉切块焯水','炒糖色炖40分钟','番茄炒蛋3分钟','紫菜蛋花汤'],price:'68.8',unit:'3-4人份'},
+      screen:{dish:'三伏家庭聚餐套餐',sub:'3-4人份 · 在家露一手',steps:['五花肉切块焯水','炒糖色炖40分钟','番茄炒蛋3分钟','紫菜蛋花汤'],price:'68.8',unit:'3-4人份'},
       staff:[
         {t:'拣货：五花肉切块 ×50份、番茄 ×50份',when:'08:30 前完成'},
         {t:'布置 <b>家庭聚餐主题区</b>：生鲜区中央岛台',when:'09:30 前完成'},
         {t:'大米+可乐 <b>连带堆头</b>：套餐旁陈列',when:'09:30 前完成'},
-        {t:'上午推送"周末家庭菜单"（家庭客群）',when:'10:00 准时'},
+        {t:'下午推送"三伏家庭菜单"（家庭客群）',when:'16:30 准时'},
       ],
       display:{main:'家庭聚餐岛台',side:'番茄鸡蛋区',cooked:'大米可乐堆头',entrance:'套餐入口'}
     },

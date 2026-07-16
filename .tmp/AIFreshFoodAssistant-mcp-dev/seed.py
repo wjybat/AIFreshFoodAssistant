@@ -18,13 +18,14 @@ DEFAULT_SCENARIO_DATA_DIR = BASE_DIR.parent.parent / "data"
 SEED = 20260715
 SALES_LOOKBACK_DAYS = 42
 PRODUCTS_PER_STORE = 50
+INVENTORY_STOCK_SCALE = 0.5
 
 
 STORES = [
-    ("STORE_001", "阳光社区超市·城东店", "示例城市", "Asia/Shanghai", "2026-07-09"),
-    ("STORE_002", "阳光社区超市·CBD店", "示例城市", "Asia/Shanghai", "2026-07-12"),
-    ("STORE_003", "阳光社区超市·家庭店", "示例城市", "Asia/Shanghai", "2026-07-13"),
-    ("STORE_004", "阳光社区超市·北方店", "示例城市", "Asia/Shanghai", "2026-12-22"),
+    ("STORE_001", "物美超市·学清路店", "示例城市", "Asia/Shanghai", "2026-07-09"),
+    ("STORE_002", "物美超市·中关村店", "示例城市", "Asia/Shanghai", "2026-07-12"),
+    ("STORE_003", "物美超市·新街口店", "示例城市", "Asia/Shanghai", "2026-07-15"),
+    ("STORE_004", "物美超市·陶然亭店", "示例城市", "Asia/Shanghai", "2026-12-22"),
 ]
 
 
@@ -173,7 +174,10 @@ def _supplemental_products() -> list[tuple[Any, ...]]:
     }
     if any(count != PRODUCTS_PER_STORE for count in product_counts.values()):
         raise RuntimeError(f"Unexpected per-store product counts: {product_counts}")
-    return all_products
+    return [
+        (*product[:4], round(float(product[4]) * INVENTORY_STOCK_SCALE, 2), *product[5:])
+        for product in all_products
+    ]
 
 
 PRODUCTS = _supplemental_products()
@@ -323,12 +327,13 @@ def build_database(db_path: Path, force: bool = False) -> None:
                 "INSERT INTO metadata(key, value) VALUES (?, ?)",
                 [
                     ("dataset_name", "AIFreshFoodAssistant store operational dataset"),
-                    ("dataset_version", "2026-07-15.v3"),
+                    ("dataset_version", "2026-07-16.v5"),
                     ("dataset_kind", "store-operational-data"),
                     ("currency", "CNY"),
                     ("timezone", "Asia/Shanghai"),
                     ("seed", str(SEED)),
                     ("sales_lookback_days", str(SALES_LOOKBACK_DAYS)),
+                    ("inventory_stock_scale", str(INVENTORY_STOCK_SCALE)),
                 ],
             )
             connection.executemany(
@@ -411,7 +416,7 @@ def build_database(db_path: Path, force: bool = False) -> None:
                 sales_end = as_of_date - timedelta(days=1)
                 sales_date = sales_start
                 base_divisor = {"low": 4.0, "normal": 7.0, "high": 10.0}.get(stock_level, 7.0)
-                base_demand = max(1.0, stock / base_divisor)
+                base_demand = max(1.0, stock / INVENTORY_STOCK_SCALE / base_divisor)
                 while sales_date <= sales_end:
                     day_index = (sales_date - sales_start).days
                     weekday_factor = (0.88, 0.92, 0.96, 1.00, 1.10, 1.24, 1.17)[sales_date.weekday()]

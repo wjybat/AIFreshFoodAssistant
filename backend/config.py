@@ -71,29 +71,6 @@ class Config:
         {"max", "xhigh", "high", "medium", "low", "minimal", "none"},
     )
 
-    # ---- 菜谱图片生成 ----
-    IMAGE_GENERATION_ENABLED: bool = _env_bool("IMAGE_GENERATION_ENABLED", True)
-    IMAGE_GENERATION_REQUIRED: bool = _env_bool("IMAGE_GENERATION_REQUIRED", False)
-    IMAGE_API_BASE_URL: str = os.getenv(
-        "IMAGE_API_BASE_URL", "http://23.238.4.238:8317/v1"
-    )
-    IMAGE_API_KEY: str = os.getenv("IMAGE_API_KEY", "").strip() or LLM_API_KEY
-    IMAGE_MODEL: str = os.getenv("IMAGE_MODEL", "gpt-image-2")
-    IMAGE_MODEL_QUERY_FALLBACK: bool = _env_bool(
-        "IMAGE_MODEL_QUERY_FALLBACK", True
-    )
-    IMAGE_SIZE: str = os.getenv("IMAGE_SIZE", "1024x1536")
-    IMAGE_QUALITY: str = _env_choice(
-        "IMAGE_QUALITY", "high", {"auto", "low", "medium", "high"}
-    )
-    IMAGE_TIMEOUT_SECONDS: float = _env_positive_float(
-        "IMAGE_TIMEOUT_SECONDS", 300
-    )
-    IMAGE_MAX_CONCURRENCY: int = _env_positive_int("IMAGE_MAX_CONCURRENCY", 2)
-    IMAGE_MAX_RESPONSE_BYTES: int = _env_positive_int(
-        "IMAGE_MAX_RESPONSE_BYTES", 20_000_000
-    )
-
     # ---- MCP 经营数据 Agent ----
     MCP_ENABLED: bool = _env_bool("MCP_ENABLED", False)
     MCP_SERVER_URL: str = os.getenv(

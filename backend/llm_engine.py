@@ -23,7 +23,6 @@ from typing import AsyncGenerator
 
 from .agent import AgentDataError, OperationalDataAgent, REQUIRED_MCP_TOOLS
 from .config import config
-from .image_engine import RecipeImageError, RecipeImageGenerator
 from .mcp_client import MCPToolClient
 from .memory import MemoryStore
 from .skills import build_system_prompt, build_few_shot, build_user_prompt
@@ -57,7 +56,6 @@ class LLMEngine:
             sales_window_days=config.AGENT_SALES_WINDOW_DAYS,
             max_products=config.AGENT_MAX_PRODUCTS,
         )
-        self.recipe_image_generator = RecipeImageGenerator()
 
         if not config.mock_mode:
             try:
@@ -159,47 +157,13 @@ class LLMEngine:
                 yield self._sse("error", f"LLM 输出不符合结果契约: {exc}")
                 return
 
-            # ===== Step 6: 菜谱图片生成 =====
-            if self.recipe_image_generator.enabled:
-                yield self._sse("status", "正在生成菜谱图片（参考版式 + 菜谱内容）...")
-                store_name = str(
-                    (working_input.get("store_info") or {}).get("store_name")
-                    or "AI社区超市"
-                )
-                image_results = await self.recipe_image_generator.generate_all(
-                    result["menus"],
-                    store_name=store_name,
-                    scenario_tag=result.get("scenario_tag", ""),
-                )
-                succeeded = 0
-                failures = []
-                for image_result in image_results:
-                    if image_result.image_url:
-                        result["menus"][image_result.index][
-                            "recipe_image_url"
-                        ] = image_result.image_url
-                        succeeded += 1
-                    elif image_result.error:
-                        failures.append(image_result.dish_name)
-                if failures:
-                    yield self._sse(
-                        "status",
-                        f"菜谱图片生成完成 {succeeded}/{len(result['menus'])}，"
-                        f"{len(failures)} 张已回退默认展示",
-                    )
-                else:
-                    yield self._sse(
-                        "status",
-                        f"菜谱图片生成完成 {succeeded}/{len(result['menus'])}",
-                    )
-
-            # ===== Step 7: 菜谱页面部署 =====
+            # ===== Step 6: 菜谱页面部署 =====
             yield self._sse("status", "正在部署菜谱页面到云端...")
             await asyncio.sleep(0.3)
 
             recipe_urls = self._deploy_recipe_pages(result, working_input)
 
-            # ===== Step 8: 等待门店负责人决策 =====
+            # ===== Step 7: 等待门店负责人决策 =====
             yield self._sse("status", "方案已生成，等待门店负责人确认...")
             await asyncio.sleep(0.2)
             plan_id = self.memory.create_pending_recommendation(
@@ -226,7 +190,7 @@ class LLMEngine:
             })
 
         except Exception as e:
-            if isinstance(e, (AgentDataError, RecipeImageError, ValueError)):
+            if isinstance(e, (AgentDataError, ValueError)):
                 logger.warning("Generation workflow rejected input: %s", e)
                 message = str(e)
             else:
@@ -654,7 +618,6 @@ class LLMEngine:
         tips = safe(recipe.get("tips", ""))
         package_price = safe(menu.get("package_price", ""))
         original_price = safe(menu.get("original_price", ""))
-        recipe_image_url = safe(menu.get("recipe_image_url", ""))
 
         ingredients_html = "".join(
             f"<tr><td>{safe(ing.get('name',''))}</td><td>{safe(ing.get('amount',''))}</td><td>{safe(ing.get('note',''))}</td></tr>"
@@ -663,11 +626,6 @@ class LLMEngine:
         steps_html = "".join(f"<li>{safe(step)}</li>" for step in steps)
         store_name = safe(store_name)
         scenario_tag = safe(scenario_tag)
-        poster_html = (
-            f'<div class="poster"><img src="{recipe_image_url}" alt="{dish} 菜谱海报"></div>'
-            if recipe_image_url
-            else ""
-        )
 
         return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -682,8 +640,6 @@ body{{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;backgroun
 .hero{{padding:32px 20px 24px;text-align:center;background:linear-gradient(135deg,#e6f7f6,#f0fdfa)}}
 .hero .emoji{{font-size:64px;margin-bottom:10px}}
 .hero h1{{font-size:24px;font-weight:800;margin-bottom:6px}}
-.poster{{padding:14px;background:#f8f3e9}}
-.poster img{{display:block;width:100%;height:auto;border-radius:16px;box-shadow:0 8px 24px rgba(80,55,25,.12)}}
 .badges{{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}}
 .badge{{font-size:11.5px;padding:4px 12px;border-radius:8px;background:#fff;color:#5a6577;font-weight:600}}
 .meta{{display:flex;border-bottom:1px solid #eef2f7}}
@@ -721,7 +677,6 @@ body{{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;backgroun
       <span class="badge">{difficulty}</span>
     </div>
   </div>
-  {poster_html}
   <div class="meta">
     <div class="meta-item"><div class="v">{servings}</div><div class="l">分量</div></div>
     <div class="meta-item"><div class="v">{cook_time}</div><div class="l">用时</div></div>

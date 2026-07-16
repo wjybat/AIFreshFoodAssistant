@@ -45,6 +45,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .app{max-width:1640px;margin:0 auto;padding:18px 20px 40px}
 .grid{display:grid;grid-template-columns:300px minmax(0,1fr) 340px;gap:16px;align-items:start}
 .col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.side-col{transform:translateY(var(--side-rail-offset,0));will-change:transform}
+.side-col #dataVizBody{grid-template-columns:1fr}
 /* Memory 和价值预估限高，不拉到页面最底部 */
 #memoryCard .card-body{max-height:calc(100vh - 250px);overflow-y:auto}
 .value-card .value-grid{max-height:calc(100vh - 250px);overflow-y:auto}
@@ -128,10 +130,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .agent-flow-wrap::before{left:0;background:linear-gradient(90deg,#f8faff,transparent)}
 .agent-flow-wrap::after{right:0;background:linear-gradient(-90deg,#f8faff,transparent)}
 .agent-flow{position:relative;display:flex;align-items:center;min-height:182px;padding:24px 22px;overflow-x:auto;scroll-behavior:smooth}
+.agent-flow.has-feedback-loop{padding-bottom:82px}
 .agent-flow::-webkit-scrollbar{height:6px}
+.feedback-loop{position:absolute;left:0;top:0;z-index:0;overflow:visible;pointer-events:none}
+.feedback-loop>path{fill:none;stroke:#0d9488;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.feedback-loop .feedback-branch{stroke-dasharray:4 5;opacity:.88}
+.feedback-loop-label{position:absolute;z-index:2;display:flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid #99f6e4;border-radius:999px;background:rgba(240,253,250,.96);box-shadow:0 4px 12px rgba(13,148,136,.11);color:#0f766e;font-size:9px;font-weight:800;line-height:1.4;white-space:nowrap;pointer-events:none}
+.feedback-loop-label i{width:6px;height:6px;border-radius:50%;background:#14b8a6;box-shadow:0 0 0 4px rgba(20,184,166,.12)}
 .flow-col{position:relative;z-index:1;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
-.flow-col.parallel{border:1.5px dashed #a5b4fc;border-radius:16px;padding:18px 10px 10px;background:rgba(238,242,255,.72);box-shadow:inset 0 0 24px rgba(99,102,241,.04)}
-.flow-col.parallel::before{content:'并行工具调用';position:absolute;top:-9px;left:14px;background:#eef2ff;border:1px solid #a5b4fc;color:#4f46e5;font-size:9px;font-weight:800;padding:2px 8px;border-radius:999px;line-height:1.5;letter-spacing:.3px}
+.flow-col.parallel{display:grid;grid-template-columns:repeat(2,178px);gap:10px;border:1.5px dashed #a5b4fc;border-radius:16px;padding:18px 10px 10px;background:rgba(238,242,255,.72);box-shadow:inset 0 0 24px rgba(99,102,241,.04)}
+.flow-col.parallel::before{content:'并行 MCP 工具调用';position:absolute;top:-9px;left:14px;background:#eef2ff;border:1px solid #a5b4fc;color:#4f46e5;font-size:9px;font-weight:800;padding:2px 8px;border-radius:999px;line-height:1.5;letter-spacing:.3px}
+.flow-col.parallel .flow-node{height:118px;min-height:118px}
 .flow-node{position:relative;width:178px;min-height:108px;background:rgba(255,255,255,.96);border:1.5px solid #dbe3ff;border-radius:14px;padding:11px 12px 10px 14px;box-shadow:0 5px 14px rgba(49,46,129,.07);transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease,background .3s ease;animation:flowNodeIn .42s cubic-bezier(.2,.8,.2,1) both;overflow:hidden}
 .flow-node::before{content:'';position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:#c7d2fe;transition:.3s}
 .flow-node::after{content:'';position:absolute;inset:0;transform:translateX(-130%);background:linear-gradient(105deg,transparent 34%,rgba(255,255,255,.74) 48%,transparent 62%);pointer-events:none}
@@ -191,8 +200,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dish-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:.2s;cursor:pointer}
 .dish-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--brand)}
 .dish-img{height:80px;display:flex;align-items:center;justify-content:center;font-size:36px;background:linear-gradient(135deg,var(--brand-l),#f0fdfa)}
-.dish-img.has-image{height:150px;padding:0;background:#f8f3e9}
-.dish-img img{display:block;width:100%;height:100%;object-fit:cover;object-position:top}
 .dish-body{padding:10px 12px}
 .dish-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
 .dish-name .role{font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;background:var(--warm-l);color:var(--warm)}
@@ -218,20 +225,39 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .reach-link .nav-arrow{font-size:18px;color:var(--ink3)}
 
 /* ===== 价值预估 ===== */
-.value-card{margin-top:0}
+.value-card{margin-top:0;overflow-anchor:none}
 .value-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}
 .value-card .card-head h3{font-size:13px}
+.value-collapse-btn{width:28px;height:28px;margin-left:auto;border:1px solid var(--line);border-radius:7px;display:grid;place-items:center;color:var(--ink2);background:var(--panel);flex-shrink:0;transition:background .2s,border-color .2s}
+.value-collapse-btn:hover{background:var(--green-l);border-color:#86efac;color:#15803d}
+.value-collapse-icon{display:block;font-size:12px;line-height:1;transition:transform .2s}
+.value-card.collapsed .value-grid{display:none}
+.value-card.collapsed .value-collapse-icon{transform:rotate(-90deg)}
 .forecast-card{--chart-color:var(--brand);min-width:0;padding:11px;background:#f8fafc;border:1px solid var(--line2);border-radius:8px;display:flex;flex-direction:column}
 .forecast-card.loss{--chart-color:#16a34a}.forecast-card.ticket{--chart-color:#ea580c}.forecast-card.cross{--chart-color:#2563eb}.forecast-card.member{--chart-color:#0d9488}
+.forecast-card.loss,.forecast-card.ticket{grid-column:1/-1}
 .forecast-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-height:39px}
 .forecast-label{font-size:10.5px;color:var(--ink2);font-weight:600;line-height:1.35}
 .forecast-value{font-size:15px;color:var(--chart-color);font-weight:800;line-height:1.2;text-align:right;overflow-wrap:anywhere}
 .forecast-chart{height:78px;display:flex;align-items:center;justify-content:center;margin:5px 0 7px}
-.single-bar-chart{width:100%}
-.metric-bar-track{height:15px;background:#e2e8f0;border-radius:3px;overflow:hidden;position:relative}
-.metric-bar-fill{display:block;height:100%;min-width:0;background:var(--chart-color);border-radius:3px;transition:width .55s ease}
-.metric-axis{display:flex;justify-content:space-between;gap:6px;margin-top:5px;color:var(--ink3);font-size:9px;line-height:1.25}
-.metric-axis span:last-child{text-align:right}
+.forecast-chart.trend-chart{height:136px;display:block;margin-top:8px}
+.loss-line-chart{width:100%;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:4px}
+.loss-line-chart svg{display:block;width:100%;height:104px;overflow:visible}
+.chart-grid-line{stroke:#dbe3ec;stroke-width:1;stroke-dasharray:3 4}
+.chart-axis-line{stroke:#cbd5e1;stroke-width:1}
+.loss-line{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.loss-line.without-plan{stroke:#94a3b8}.loss-line.with-plan{stroke:#16a34a}
+.loss-point{stroke:#fff;stroke-width:2}.loss-point.without-plan{fill:#94a3b8}.loss-point.with-plan{fill:#16a34a}
+.loss-axis-label{fill:#94a3b8;font-size:9px;font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+.chart-legend{display:flex;align-items:center;justify-content:center;gap:14px;color:var(--ink3);font-size:9px;line-height:1}
+.chart-legend span{display:flex;align-items:center;gap:5px}.chart-legend i{display:block;width:15px;height:3px;border-radius:3px;background:#94a3b8}.chart-legend .with-plan i{background:#16a34a}
+.ticket-column-chart{width:100%;height:100%;display:grid;grid-template-columns:32px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;column-gap:8px}
+.ticket-y-axis{grid-row:1;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding:1px 0 4px;color:var(--ink3);font-size:8px}
+.ticket-bars{grid-column:2;grid-row:1;position:relative;display:flex;align-items:flex-end;justify-content:center;gap:38px;border-left:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;background:repeating-linear-gradient(to bottom,transparent 0 31px,#e2e8f0 31px 32px)}
+.ticket-bar-group{height:100%;width:54px;display:flex;align-items:flex-end;justify-content:center;position:relative;padding-top:16px}
+.ticket-bar{width:32px;min-height:3px;height:var(--bar-height);border-radius:4px 4px 0 0;background:#94a3b8;transition:height .55s ease}.ticket-bar.with-plan{background:#ea580c}
+.ticket-bar-value{position:absolute;left:50%;top:calc(100% - var(--bar-height) - 15px);transform:translateX(-50%);font-size:9px;font-weight:800;color:var(--ink2);white-space:nowrap}.ticket-bar-group.with-plan .ticket-bar-value{color:#c2410c}
+.ticket-labels{grid-column:2;grid-row:2;display:flex;justify-content:center;gap:38px;padding-top:4px;color:var(--ink3);font-size:9px}.ticket-labels span{width:54px;text-align:center}.ticket-labels .with-plan{color:#c2410c;font-weight:700}
 .compare-bars{width:100%;display:flex;flex-direction:column;gap:8px}
 .compare-row{display:grid;grid-template-columns:26px minmax(0,1fr) 30px;align-items:center;gap:5px;font-size:9px;color:var(--ink3)}
 .compare-row b{font-size:9.5px;color:var(--ink2);text-align:right;font-weight:700}
@@ -254,8 +280,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .modal-close:hover{background:rgba(0,0,0,.15)}
 .rm-hero{padding:28px 24px 20px;text-align:center;background:linear-gradient(135deg,var(--brand-l),#f0fdfa);position:relative}
 .rm-hero .rm-emoji{font-size:56px;margin-bottom:8px}
-.rm-hero.has-poster{padding:0;background:#f8f3e9}
-.rm-hero .rm-poster{display:block;width:100%;max-height:560px;object-fit:contain;object-position:top;background:#f8f3e9}
 .rm-hero h2{font-size:22px;font-weight:800}
 .rm-section{padding:16px 24px;border-bottom:1px solid var(--line2)}
 .rm-section h4{font-size:14px;font-weight:700;margin-bottom:10px}
@@ -334,12 +358,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .panel-output-body .streaming-content{color:#2a2a3a}
 
 /* ===== 响应式 ===== */
-@media(max-width:1280px){.grid{grid-template-columns:1fr}.value-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#dataVizBody{grid-template-columns:1fr}}
+@media(max-width:1280px){.grid{grid-template-columns:1fr}.side-col{transform:none!important}.value-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#dataVizBody{grid-template-columns:1fr}}
 @media(max-width:700px){
   .topbar{position:static;flex-wrap:wrap;padding:12px 14px;gap:9px}.brand{width:100%}.topbar-right{width:100%;margin-left:0;display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:7px}.status-chip{grid-column:1/-1;justify-content:center;min-width:0}.think-toggle,.history-btn,.gen-btn{justify-content:center;padding:8px 9px;white-space:nowrap}.gen-btn{min-width:0}
   .agent-trace-head{align-items:flex-start;padding:11px 12px}.agent-trace-head .head-icon{width:28px;height:28px}.agent-trace-head .head-sub{display:none}.agent-trace-head .badge{margin-top:3px}.agent-trace-live{display:none}
-  .agent-flow{min-height:0;max-height:520px;flex-direction:column;align-items:stretch;padding:22px 14px;overflow-x:hidden;overflow-y:auto}
-  .flow-col{width:100%}.flow-col.parallel{width:100%;padding:18px 9px 9px}.flow-node{width:100%;min-height:0}
+  .agent-flow{min-height:0;max-height:520px;flex-direction:column;align-items:stretch;padding:22px 14px;overflow-x:hidden;overflow-y:auto}.agent-flow.has-feedback-loop{padding-right:54px;padding-bottom:24px}
+  .feedback-loop-label{writing-mode:vertical-rl;padding:8px 4px;white-space:normal}.feedback-loop-label i{flex-shrink:0}
+  .flow-col{width:100%}.flow-col.parallel{width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:18px 9px 9px}.flow-node{width:100%;min-height:0}.flow-col.parallel .flow-node{height:124px;min-height:124px;padding:9px 9px 8px 11px}.flow-col.parallel .fn-label{font-size:11px}.flow-col.parallel .fn-detail{font-size:9.5px}.flow-col.parallel .fn-meta span{font-size:8px;padding:2px 4px}.flow-col.parallel .fn-meta span:not(:first-child){display:none}
   .flow-link{width:24px;height:38px;align-self:center}
   .flow-link::before{left:50%;right:auto;top:2px;bottom:9px;width:2px;height:auto;margin:0 0 0 -1px}
   .flow-link::after{right:auto;left:50%;top:auto;bottom:1px;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #c7d2fe;border-bottom:0}
@@ -377,26 +402,20 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 <div class="app">
 <div class="grid">
 
-  <!-- 左列：数据输入 + Memory -->
-  <div class="col">
+  <!-- 左列：数据输入 + 数据可视化 -->
+  <div class="col side-col side-col-left">
     <div class="card">
       <div class="card-head"><div class="h-icon" style="background:var(--blue-l);color:var(--blue)">📂</div><h3>数据输入</h3><span class="sub" id="dataFileLabel">未加载</span></div>
       <div class="card-body" id="dataSelectBody"></div>
     </div>
-    <div class="card" id="memoryCard">
-      <div class="card-head"><div class="h-icon" style="background:var(--purple-l);color:var(--purple)">🧩</div><h3>Memory 管理</h3><span class="sub" id="memCountLabel">-</span></div>
-      <div class="card-body">
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <button class="mem-btn" onclick="viewMemory()" style="flex:1;padding:8px;border-radius:8px;background:var(--line2);font-size:12px;font-weight:600">📋 查看样例</button>
-          <button class="mem-btn" onclick="resetMemory()" style="flex:1;padding:8px;border-radius:8px;background:var(--red-l);color:var(--red);font-size:12px;font-weight:600">🔄 重置</button>
-        </div>
-        <div id="memoryList" style="display:none;overflow-y:auto"></div>
-      </div>
+    <div class="card" id="dataVizCard" style="display:none">
+      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📊</div><h3>数据可视化</h3></div>
+      <div class="card-body" id="dataVizBody"></div>
     </div>
   </div>
 
-  <!-- 中列：AI引擎 + 数据可视化 -->
-  <div class="col">
+  <!-- 中列：AI引擎 -->
+  <div class="col main-col">
     <div class="card engine-card" style="flex:1">
       <div class="card-head"><div class="h-icon" style="background:var(--brand-l);color:var(--brand-d)">🧠</div><h3>LLM Agentic Workflow</h3><span class="sub" id="engineStatus">待命</span></div>
       <div class="card-body" id="engineBody">
@@ -434,20 +453,26 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
         </div>
       </div>
     </div>
-    <div class="card" id="dataVizCard" style="display:none">
-      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📊</div><h3>数据可视化</h3></div>
-      <div class="card-body" id="dataVizBody"></div>
-    </div>
   </div>
 
-  <!-- 右列：触达矩阵 + 价值预估 -->
-  <div class="col">
+  <!-- 右列：Memory + 触达矩阵 + 价值预估 -->
+  <div class="col side-col side-col-right">
+    <div class="card" id="memoryCard">
+      <div class="card-head"><div class="h-icon" style="background:var(--purple-l);color:var(--purple)">🧩</div><h3>Memory 管理</h3><span class="sub" id="memCountLabel">-</span></div>
+      <div class="card-body">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="mem-btn" onclick="viewMemory()" style="flex:1;padding:8px;border-radius:8px;background:var(--line2);font-size:12px;font-weight:600">📋 查看样例</button>
+          <button class="mem-btn" onclick="resetMemory()" style="flex:1;padding:8px;border-radius:8px;background:var(--red-l);color:var(--red);font-size:12px;font-weight:600">🔄 重置</button>
+        </div>
+        <div id="memoryList" style="display:none;overflow-y:auto"></div>
+      </div>
+    </div>
     <div class="card" id="reachCard" style="display:none">
       <div class="card-head"><div class="h-icon" style="background:var(--purple-l);color:var(--purple)">📡</div><h3>全渠道触达矩阵</h3><span class="sub">待负责人确认</span></div>
       <div class="reach-nav" id="reachNav"></div>
     </div>
     <div class="card value-card" id="valueCard" style="display:none">
-      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📈</div><h3>价值预估（理想化展示数据）</h3></div>
+      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📈</div><h3>价值预估（理想化展示数据）</h3><button type="button" class="value-collapse-btn" id="valueCollapseBtn" onclick="toggleValueCard()" aria-label="折叠价值预估" aria-expanded="true" title="折叠价值预估"><span class="value-collapse-icon">▼</span></button></div>
       <div class="value-grid" id="valueGrid"></div>
     </div>
   </div>
@@ -477,6 +502,7 @@ const inventoryPageSize=10;
 const agentFlowNodes=new Map();
 let agentFlowColumns=[];
 let agentFlowFocusFrame=null;
+let feedbackLoopFrame=null;
 let workflowActiveStageId=null;
 let workflowFallbackIndex=0;
 
@@ -866,16 +892,37 @@ function togglePanel(id){
   document.getElementById(id).classList.toggle('collapsed');
 }
 
+function toggleValueCard(){
+  const card=document.getElementById('valueCard');
+  const button=document.getElementById('valueCollapseBtn');
+  const scrollTop=window.scrollY;
+  const collapsed=card.classList.toggle('collapsed');
+  button.setAttribute('aria-expanded',String(!collapsed));
+  button.setAttribute('aria-label',collapsed?'展开价值预估':'折叠价值预估');
+  button.title=collapsed?'展开价值预估':'折叠价值预估';
+  alignSideRails();
+  requestAnimationFrame(()=>{
+    window.scrollTo({top:scrollTop,left:window.scrollX,behavior:'instant'});
+    alignSideRails();
+  });
+}
+
 function resetAgentTrace(){
   if(agentFlowFocusFrame!==null){
     cancelAnimationFrame(agentFlowFocusFrame);
     agentFlowFocusFrame=null;
   }
+  if(feedbackLoopFrame!==null){
+    cancelAnimationFrame(feedbackLoopFrame);
+    feedbackLoopFrame=null;
+  }
   agentFlowNodes.clear();
   agentFlowColumns=[];
   workflowActiveStageId=null;
   workflowFallbackIndex=0;
-  document.getElementById('agentFlow').replaceChildren();
+  const flow=document.getElementById('agentFlow');
+  flow.replaceChildren();
+  flow.classList.remove('has-feedback-loop');
   const trace=document.getElementById('agentTrace');
   trace.style.display='none';
   trace.classList.remove('collapsed');
@@ -964,15 +1011,6 @@ function updateAgentTraceSummary(){
   progress.parentElement.classList.toggle('failed',failed>0);
 }
 
-function safeAssetUrl(value){
-  try{
-    const url=new URL(String(value||''),window.location.origin);
-    return ['http:','https:'].includes(url.protocol)?url.href:'';
-  }catch(_error){
-    return '';
-  }
-}
-
 function focusRunningAgentNode(flow,nodeEl){
   if(agentFlowFocusFrame!==null) cancelAnimationFrame(agentFlowFocusFrame);
   agentFlowFocusFrame=requestAnimationFrame(()=>{
@@ -989,6 +1027,133 @@ function focusRunningAgentNode(flow,nodeEl){
       flow.scrollTo({left:Math.max(0,left),behavior:'smooth'});
     }
   });
+}
+
+function nodeBoundsInFlow(flow,nodeEl){
+  const flowRect=flow.getBoundingClientRect();
+  const nodeRect=nodeEl.getBoundingClientRect();
+  return {
+    left:nodeRect.left-flowRect.left+flow.scrollLeft,
+    top:nodeRect.top-flowRect.top+flow.scrollTop,
+    width:nodeRect.width,
+    height:nodeRect.height,
+  };
+}
+
+function scheduleFeedbackLoop(){
+  if(feedbackLoopFrame!==null) cancelAnimationFrame(feedbackLoopFrame);
+  feedbackLoopFrame=requestAnimationFrame(()=>{
+    feedbackLoopFrame=null;
+    renderFeedbackLoop();
+  });
+}
+
+function renderFeedbackLoop(){
+  const flow=document.getElementById('agentFlow');
+  const saveNode=agentFlowNodes.get('workflow-save')?.el;
+  const memoryNode=agentFlowNodes.get('workflow-memory')?.el;
+  const skillsNode=agentFlowNodes.get('workflow-prompt')?.el;
+  if(!saveNode||!memoryNode||!skillsNode){
+    flow.classList.remove('has-feedback-loop');
+    flow.querySelectorAll('.feedback-loop,.feedback-loop-label').forEach(el=>el.remove());
+    return;
+  }
+
+  flow.classList.add('has-feedback-loop');
+
+  flow.querySelectorAll('.feedback-loop,.feedback-loop-label').forEach(el=>el.remove());
+  const save=nodeBoundsInFlow(flow,saveNode);
+  const memory=nodeBoundsInFlow(flow,memoryNode);
+  const skills=nodeBoundsInFlow(flow,skillsNode);
+  const vertical=getComputedStyle(flow).flexDirection==='column';
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.classList.add('feedback-loop');
+  const markerId='feedback-loop-arrow';
+  svg.innerHTML=`<defs><marker id="${markerId}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#0d9488"></path></marker></defs><path class="feedback-main"></path><path class="feedback-branch"></path>`;
+  const main=svg.querySelector('.feedback-main');
+  const branch=svg.querySelector('.feedback-branch');
+  main.setAttribute('marker-end',`url(#${markerId})`);
+  branch.setAttribute('marker-end',`url(#${markerId})`);
+
+  const label=document.createElement('div');
+  label.className='feedback-loop-label';
+  label.innerHTML='<i></i><span>负责人反馈 · Memory 沉淀 · Skills 优化</span>';
+
+  if(vertical){
+    const saveX=save.left+save.width;
+    const saveY=save.top+save.height/2;
+    const memoryX=memory.left+memory.width;
+    const memoryY=memory.top+memory.height/2;
+    const skillsX=skills.left+skills.width;
+    const skillsY=skills.top+skills.height/2;
+    const railX=Math.max(saveX,memoryX,skillsX)+26;
+    main.setAttribute('d',`M ${saveX} ${saveY} H ${railX} V ${memoryY} H ${memoryX+5}`);
+    branch.setAttribute('d',`M ${railX} ${skillsY} H ${skillsX+5}`);
+    label.style.left=`${railX+6}px`;
+    label.style.top=`${(memoryY+skillsY)/2-50}px`;
+  }else{
+    const saveX=save.left+save.width/2;
+    const saveY=save.top+save.height;
+    const memoryX=memory.left+memory.width/2;
+    const memoryY=memory.top+memory.height;
+    const skillsX=skills.left+skills.width/2;
+    const skillsY=skills.top+skills.height;
+    const railY=Math.max(saveY,memoryY,skillsY)+40;
+    main.setAttribute('d',`M ${saveX} ${saveY} V ${railY} H ${memoryX} V ${memoryY+5}`);
+    branch.setAttribute('d',`M ${skillsX} ${railY} V ${skillsY+5}`);
+    label.style.left=`${Math.max(memoryX+18,Math.min(saveX-230,(saveX+skillsX)/2-100))}px`;
+    label.style.top=`${railY-15}px`;
+  }
+
+  const width=Math.max(flow.scrollWidth,flow.clientWidth);
+  const height=Math.max(flow.scrollHeight,flow.clientHeight);
+  svg.setAttribute('width',width);
+  svg.setAttribute('height',height);
+  svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+  flow.prepend(svg);
+  flow.append(label);
+}
+
+const presentationMcpTools=[
+  {
+    id:'presentation-mcp-weather-festival',
+    label:'获取天气与节日',
+    toolName:'get_weather_festival',
+    runningDetail:'查询当日天气、温度与节日信息',
+  },
+  {
+    id:'presentation-mcp-community-profile',
+    label:'获取社区画像',
+    toolName:'get_community_profile',
+    runningDetail:'查询客群结构、通勤与客流特征',
+  },
+];
+
+function presentationMcpDetail(tool,state){
+  if(state==='running') return tool.runningDetail;
+  if(state==='failed') return '上下文数据获取中止';
+  const context=currentDisplayData||currentData||{};
+  if(tool.id==='presentation-mcp-weather-festival'){
+    const weather=context.weather||{};
+    const festival=context.festival||{};
+    return [weather.description||weather.condition,festival.name||'无特殊节日'].filter(Boolean).join(' · ')||'天气与节日上下文已获取';
+  }
+  const community=context.community||{};
+  const traffic=context.foot_traffic||{};
+  return [community.type,community.peak_hour,Number.isFinite(traffic.estimated)?`预计客流 ${traffic.estimated} 人`:null].filter(Boolean).join(' · ')||'社区画像上下文已获取';
+}
+
+// 展示层占位事件：后端接入对应 MCP 工具后可由真实 SSE 事件替换。
+function renderPresentationMcpTools(state){
+  presentationMcpTools.forEach(tool=>renderAgentEvent({
+    kind:'tool',
+    id:tool.id,
+    state,
+    label:tool.label,
+    detail:presentationMcpDetail(tool,state),
+    tool_name:tool.toolName,
+    source:'MCP',
+  }));
 }
 
 function renderAgentEvent(evt){
@@ -1022,13 +1187,34 @@ function renderAgentEvent(evt){
   updateAgentFlowLinks();
   updateAgentTraceSummary();
   if(node.state==='running') focusRunningAgentNode(flow,node.el);
+  if(['workflow-memory','workflow-prompt','workflow-save'].includes(evt.id)) renderFeedbackLoop();
+
+  if(evt.id==='prices'&&node.state==='running'){
+    renderPresentationMcpTools('running');
+  }else if(evt.id==='prices'&&node.state==='completed'){
+    renderPresentationMcpTools('completed');
+  }else if((evt.id==='sales'||evt.id==='prices')&&node.state==='failed'){
+    renderPresentationMcpTools('failed');
+  }
 }
 
 function workflowStageLabel(id,fallback='生成阶段'){
   return agentFlowNodes.get(id)?.label.textContent||fallback;
 }
 
+function ensureWorkflowTrigger(){
+  if(agentFlowNodes.has('workflow-trigger')) return;
+  renderAgentEvent({
+    kind:'step',
+    id:'workflow-trigger',
+    state:'completed',
+    label:'工作流触发',
+    detail:'触发方式：手动触发 · 自动化条件触发',
+  });
+}
+
 function startWorkflowStage(id,label,detail){
+  ensureWorkflowTrigger();
   if(workflowActiveStageId&&workflowActiveStageId!==id){
     completeWorkflowStage(workflowActiveStageId,'已完成');
   }
@@ -1073,7 +1259,7 @@ function renderWorkflowStatus(message){
     completeWorkflowStage('workflow-memory',text);
   }else if(text.includes('正在组装 Prompt')){
     completeWorkflowStage('workflow-memory','历史样例检索完成');
-    startWorkflowStage('workflow-prompt','组装生成 Prompt','注入 Skills、Few-Shot 与当日经营数据');
+    startWorkflowStage('workflow-prompt','Skills 与 Prompt 组装','注入 Skills、Few-Shot 与当日经营数据');
   }else if(text.includes('正在调用 LLM')){
     completeWorkflowStage('workflow-prompt','Prompt 组装完成');
     startWorkflowStage('workflow-llm','调用 LLM 生成方案',text.replace(/^正在/,'').replace(/生成中\.\.\.$/,''));
@@ -1083,17 +1269,8 @@ function renderWorkflowStatus(message){
   }else if(text.includes('正在解析结构化输出')){
     completeWorkflowStage('workflow-llm','模型输出流接收完成');
     startWorkflowStage('workflow-parse','解析结构化输出','校验菜单与经营方案字段');
-  }else if(text.includes('正在生成菜谱图片')){
-    completeWorkflowStage('workflow-parse','结构化结果解析完成');
-    startWorkflowStage('workflow-image','生成菜谱图片','参考版式与每道菜的结构化菜谱');
-  }else if(text.includes('菜谱图片生成完成')){
-    completeWorkflowStage('workflow-image',text);
   }else if(text.includes('正在部署菜谱页面')){
-    if(agentFlowNodes.get('workflow-image')?.state==='running'){
-      completeWorkflowStage('workflow-image','菜谱图片生成完成');
-    }else{
-      completeWorkflowStage('workflow-parse','结构化结果解析完成');
-    }
+    completeWorkflowStage('workflow-parse','结构化结果解析完成');
     startWorkflowStage('workflow-deploy','部署菜谱页面','生成独立菜谱页面与访问链接');
   }else if(text.includes('方案已生成，等待门店负责人确认')){
     completeWorkflowStage('workflow-deploy','菜谱页面部署完成');
@@ -1107,21 +1284,55 @@ function renderWorkflowStatus(message){
 }
 
 function renderRestoredWorkflow(plan,savedTrace){
+  ensureWorkflowTrigger();
   renderAgentEvent({kind:'stage',id:'workflow-agent-start',state:'completed',label:'启动经营数据 Agent',detail:'已恢复经营数据上下文'});
   savedTrace.forEach(renderAgentEvent);
   const stages=[
     ['workflow-memory','检索 Memory 历史样例','历史样例检索已完成'],
-    ['workflow-prompt','组装生成 Prompt','Skills 与 Few-Shot 注入完成'],
+    ['workflow-prompt','Skills 与 Prompt 组装','Skills 与 Few-Shot 注入完成'],
     ['workflow-llm','调用 LLM 生成方案','模型生成已完成'],
     ['workflow-parse','解析结构化输出','结果契约校验完成'],
     ['workflow-deploy','部署菜谱页面','菜谱访问链接已生成'],
     ['workflow-save','保存待确认方案',recommendationStatus(plan)],
   ];
-  if((plan.result?.menus||[]).some(menu=>menu.recipe_image_url)){
-    stages.splice(4,0,['workflow-image','生成菜谱图片','菜谱海报已生成']);
-  }
   stages.forEach(([id,label,detail])=>renderAgentEvent({kind:'stage',id,state:'completed',label,detail}));
 }
+
+let sideRailFrame=null;
+
+function alignSideRails(){
+  sideRailFrame=null;
+  const sideRails=document.querySelectorAll('.side-col');
+  if(!window.matchMedia('(min-width:1281px)').matches){
+    sideRails.forEach(rail=>rail.style.removeProperty('--side-rail-offset'));
+    return;
+  }
+
+  const grid=document.querySelector('.grid');
+  const mainColumn=document.querySelector('.main-col');
+  if(!grid||!mainColumn) return;
+  const gridTop=grid.getBoundingClientRect().top+window.scrollY;
+  const mainHeight=mainColumn.offsetHeight;
+  const viewportBottom=window.scrollY+window.innerHeight;
+
+  sideRails.forEach(rail=>{
+    const railHeight=rail.offsetHeight;
+    const viewportOffset=Math.max(0,viewportBottom-gridTop-railHeight);
+    const maxOffset=Math.max(0,mainHeight-railHeight);
+    rail.style.setProperty('--side-rail-offset',`${Math.round(Math.min(viewportOffset,maxOffset))}px`);
+  });
+}
+
+function scheduleSideRailAlignment(){
+  if(sideRailFrame===null) sideRailFrame=requestAnimationFrame(alignSideRails);
+}
+
+const sideRailResizeObserver=new ResizeObserver(scheduleSideRailAlignment);
+document.querySelectorAll('.side-col,.main-col').forEach(column=>sideRailResizeObserver.observe(column));
+window.addEventListener('scroll',scheduleSideRailAlignment,{passive:true});
+window.addEventListener('resize',scheduleSideRailAlignment);
+window.addEventListener('resize',scheduleFeedbackLoop);
+scheduleSideRailAlignment();
 
 /* 将任意大小的 SSE 分片拆成稳定的逐字播放队列，完成后仅解析一次 Markdown。 */
 function createStreamRenderer(elId){
@@ -1322,16 +1533,11 @@ function renderResult(data){
   const r=data.result;
   // 菜单
   document.getElementById('menuOut').style.display='block';
-  const imageCount=r.menus.filter(menu=>safeAssetUrl(menu.recipe_image_url)).length;
-  document.getElementById('menuMeta').textContent=`${r.menus.length}道菜 · 点击查看菜谱${imageCount?` · ${imageCount}张海报`:''}`;
+  document.getElementById('menuMeta').textContent=`${r.menus.length}道菜 · 点击查看菜谱`;
   document.getElementById('menuGrid').innerHTML=r.menus.map((d,i)=>{
-    const imageUrl=safeAssetUrl(d.recipe_image_url);
-    const visual=imageUrl
-      ?`<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(d.dish||'菜谱')}海报" loading="lazy">`
-      :escapeHtml(d.emoji||'🍳');
     return `
     <div class="dish-card fade-up" style="animation-delay:${i*0.1}s" onclick="openRecipe(${i})">
-      <div class="dish-img${imageUrl?' has-image':''}">${visual}</div>
+      <div class="dish-img">${escapeHtml(d.emoji||'🍳')}</div>
       <div class="dish-body">
         <div class="dish-name">${escapeHtml(d.dish)}<span class="role">${escapeHtml(d.role)}</span></div>
         <div class="dish-desc">${escapeHtml(d.priority_reason||'')}</div>
@@ -1413,10 +1619,48 @@ function estimateReason(metric){
   return metric.reason||'历史方案未保存结构化测算依据。';
 }
 
+function chartPoints(values,maxValue,width=252,height=82,padding=8){
+  const usableWidth=width-padding*2;
+  const usableHeight=height-padding*2;
+  return values.map((value,index)=>({
+    x:padding+(values.length===1?usableWidth/2:index*usableWidth/(values.length-1)),
+    y:padding+usableHeight-(Math.max(0,value)/Math.max(maxValue,1))*usableHeight,
+  }));
+}
+
+function renderLossTrend(metric){
+  const hasBaseline=Number.isFinite(metric.baseline)&&metric.baseline>0;
+  const withoutPlanTotal=Math.max(hasBaseline?metric.baseline:metric.value*2,metric.value,1);
+  const withPlanTotal=Math.max(0,withoutPlanTotal-metric.value);
+  const dayWeights=[0.12,0.29,0.51,0.75,1];
+  const withoutPlan=dayWeights.map(weight=>withoutPlanTotal*weight);
+  const withPlan=dayWeights.map(weight=>withPlanTotal*weight);
+  const withoutPoints=chartPoints(withoutPlan,withoutPlanTotal);
+  const withPoints=chartPoints(withPlan,withoutPlanTotal);
+  const polyline=points=>points.map(point=>`${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+  const dots=(points,className)=>points.map(point=>`<circle class="loss-point ${className}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3"></circle>`).join('');
+  const labels=['今天','第2天','第3天','第4天','第5天'];
+  const dayLabels=withoutPoints.map((point,index)=>`<text class="loss-axis-label" x="${point.x.toFixed(1)}" y="101" text-anchor="middle">${labels[index]}</text>`).join('');
+  const ariaLabel=`未来5天累计损耗成本，不采用方案约${withoutPlanTotal.toFixed(1)}元，采用方案约${withPlanTotal.toFixed(1)}元`;
+  return `<div class="forecast-chart trend-chart"><div class="loss-line-chart" role="img" aria-label="${escapeHtml(ariaLabel)}"><svg viewBox="0 0 252 108" aria-hidden="true"><line class="chart-grid-line" x1="8" y1="8" x2="244" y2="8"></line><line class="chart-grid-line" x1="8" y1="41" x2="244" y2="41"></line><line class="chart-axis-line" x1="8" y1="74" x2="244" y2="74"></line><polyline class="loss-line without-plan" points="${polyline(withoutPoints)}"></polyline><polyline class="loss-line with-plan" points="${polyline(withPoints)}"></polyline>${dots(withoutPoints,'without-plan')}${dots(withPoints,'with-plan')}${dayLabels}</svg><div class="chart-legend"><span><i></i>未采用方案 ¥${Math.round(withoutPlanTotal).toLocaleString('zh-CN')}</span><span class="with-plan"><i></i>采用方案 ¥${Math.round(withPlanTotal).toLocaleString('zh-CN')}</span></div></div></div><div class="forecast-context">未来 5 天累计损耗成本预测</div>`;
+}
+
+function renderTicketColumns(metric){
+  const baselineIndex=100;
+  const planIndex=baselineIndex+Math.max(0,metric.value);
+  const axisMax=Math.ceil(planIndex/10)*10;
+  const baselineHeight=baselineIndex/axisMax*100;
+  const planHeight=planIndex/axisMax*100;
+  return `<div class="forecast-chart trend-chart"><div class="ticket-column-chart" role="img" aria-label="客单价指数由常规方案的 ${baselineIndex} 提升至 ${planIndex}"><div class="ticket-y-axis"><span>${axisMax}</span><span>${Math.round(axisMax/2)}</span><span>0</span></div><div class="ticket-bars"><div class="ticket-bar-group" style="--bar-height:${baselineHeight}%"><b class="ticket-bar-value">${baselineIndex}</b><i class="ticket-bar"></i></div><div class="ticket-bar-group with-plan" style="--bar-height:${planHeight}%"><b class="ticket-bar-value">${planIndex}</b><i class="ticket-bar with-plan"></i></div></div><div class="ticket-labels"><span>常规</span><span class="with-plan">采用方案</span></div></div></div><div class="forecast-context">客单价指数对比（常规 = 100）</div>`;
+}
+
 function renderEstimateChart(key,metric){
   if(!Number.isFinite(metric.value)){
     return '<div class="forecast-chart"><div class="forecast-empty">暂无可图表化数值</div></div><div class="forecast-context">等待结构化测算</div>';
   }
+
+  if(key==='loss_reduction') return renderLossTrend(metric);
+  if(key==='ticket_lift') return renderTicketColumns(metric);
 
   if(key==='member_open_rate'){
     const progress=Math.min(100,Math.max(0,metric.value));
@@ -1432,10 +1676,7 @@ function renderEstimateChart(key,metric){
     return `<div class="forecast-chart"><div class="compare-bars" role="img" aria-label="连带率由 ${baseline} 提升至 ${escapeHtml(formatEstimateValue(metric,key))}"><div class="compare-row"><span>当前</span><div class="compare-track"><i class="compare-fill" style="width:${currentWidth}%"></i></div><b>${baseline}</b></div><div class="compare-row target"><span>预测</span><div class="compare-track"><i class="compare-fill" style="width:${targetWidth}%"></i></div><b>${metric.value}</b></div></div></div><div class="forecast-context">单位：${escapeHtml(metric.unit)}</div>`;
   }
 
-  const chartMax=key==='ticket_lift'?100:(Number.isFinite(metric.baseline)&&metric.baseline>0?metric.baseline:metric.value);
-  const progress=Math.min(100,Math.max(0,metric.value/Math.max(chartMax,1)*100));
-  const maxLabel=key==='ticket_lift'?'100%':Number.isFinite(metric.baseline)?`风险额 ${formatEstimateValue({...metric,value:metric.baseline},key)}`:formatEstimateValue(metric,key);
-  return `<div class="forecast-chart"><div class="single-bar-chart" role="img" aria-label="${escapeHtml(formatEstimateValue(metric,key))}"><div class="metric-bar-track"><i class="metric-bar-fill" style="width:${progress}%"></i></div><div class="metric-axis"><span>0</span><span>${escapeHtml(maxLabel)}</span></div></div></div><div class="forecast-context">${key==='ticket_lift'?'客单价预计提升幅度':'预计可减少的损耗金额'}</div>`;
+  return '<div class="forecast-chart"><div class="forecast-empty">暂无对应图表</div></div>';
 }
 
 function renderValue(r){
@@ -1460,14 +1701,13 @@ function openRecipe(idx){
   const d=currentResult.menus[idx];
   const recipe=d.recipe||{};
   const url=recipeUrls[d.dish]||'';
-  const recipeImageUrl=safeAssetUrl(d.recipe_image_url);
 
   const ingredients=(d.ingredients||[]).map(ing=>`<tr><td>${escapeHtml(ing.name)}</td><td>${escapeHtml(ing.amount)}</td><td style="font-size:11px;color:var(--ink3)">${escapeHtml(ing.note||'')}</td></tr>`).join('');
   const steps=(recipe.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
 
   document.getElementById('recipeModalInner').innerHTML=`
     <button class="modal-close" onclick="closeRecipe()">✕</button>
-    <div class="rm-hero${recipeImageUrl?' has-poster':''}">${recipeImageUrl?`<img class="rm-poster" src="${escapeHtml(recipeImageUrl)}" alt="${escapeHtml(d.dish||'菜谱')}海报">`:`<div class="rm-emoji">${escapeHtml(d.emoji||'🍳')}</div><h2>${escapeHtml(d.dish)}</h2>`}</div>
+    <div class="rm-hero"><div class="rm-emoji">${escapeHtml(d.emoji||'🍳')}</div><h2>${escapeHtml(d.dish)}</h2></div>
     <div class="rm-section"><h4>🥬 食材清单</h4><table class="rm-ingr-table">${ingredients}</table></div>
     <div class="rm-section"><h4>👩‍🍳 制作步骤</h4><ol class="rm-steps">${steps}</ol></div>
     <div class="rm-section"><h4>💡 小贴士</h4><div class="rm-tips">${escapeHtml(recipe.tips||'')}</div></div>
