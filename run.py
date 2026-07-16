@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-AI 社区餐桌预测引擎 —— 启动脚本
+AI生鲜助手 —— 启动脚本
 
 用法:
   python run.py              # 启动服务器（默认 0.0.0.0:8000）
@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def main():
-    parser = argparse.ArgumentParser(description="AI 社区餐桌预测引擎")
+    parser = argparse.ArgumentParser(description="AI生鲜助手")
     parser.add_argument("--host", default=None, help="服务器地址 (默认: .env 中的 SERVER_HOST)")
     parser.add_argument("--port", type=int, default=None, help="端口 (默认: .env 中的 SERVER_PORT)")
     parser.add_argument("--seed", action="store_true", help="启动前注入 Memory 种子样例")
@@ -56,9 +56,14 @@ def main():
                 output={
                     "scenario_tag": "雨天晚餐·家庭客群",
                     "menus": [{"dish": "青椒肉丝"}, {"dish": "麻婆豆腐"}, {"dish": "紫菜蛋花汤"}],
-                    "value_estimate": {"loss_reduction": "¥2,840", "ticket_lift": "+18%"},
+                    "value_estimate": {
+                        "loss_reduction": {"value": 2840, "unit": "元", "baseline": 4100, "reason": "按临期库存成本与雨天晚餐预计消化量估算。"},
+                        "ticket_lift": {"value": 18, "unit": "%", "baseline": 0, "reason": "三菜套餐叠加熟食加购，理想化估算客单价提升。"},
+                        "cross_sell_rate": {"value": 3.8, "unit": "件/单", "baseline": 1.1, "reason": "主菜、配菜、汤品与熟食形成多品类联动。"},
+                        "member_open_rate": {"value": 27, "unit": "%", "baseline": 16, "reason": "雨天晚餐场景在下班前定时触达家庭客群。"},
+                    },
                 },
-                metrics={"loss_reduction": "¥2,840"},
+                metrics={"loss_reduction": 2840, "ticket_lift": 18},
                 is_successful=True,
                 tags=["雨天晚餐"],
             )
@@ -73,9 +78,14 @@ def main():
                 output={
                     "scenario_tag": "高温清凉·白领午间",
                     "menus": [{"dish": "凉拌黄瓜木耳"}, {"dish": "冬瓜排骨汤"}, {"dish": "绿豆汤"}],
-                    "value_estimate": {"loss_reduction": "¥3,120", "ticket_lift": "+22%"},
+                    "value_estimate": {
+                        "loss_reduction": {"value": 3120, "unit": "元", "baseline": 4500, "reason": "按高温易损库存成本与午间预计消化量估算。"},
+                        "ticket_lift": {"value": 22, "unit": "%", "baseline": 0, "reason": "清凉套餐组合较单品购买形成更高客单。"},
+                        "cross_sell_rate": {"value": 3.6, "unit": "件/单", "baseline": 1.2, "reason": "凉菜、汤品和饮品形成午间连带组合。"},
+                        "member_open_rate": {"value": 31, "unit": "%", "baseline": 18, "reason": "高温午间主题与白领客群需求匹配度较高。"},
+                    },
                 },
-                metrics={"loss_reduction": "¥3,120"},
+                metrics={"loss_reduction": 3120, "ticket_lift": 22},
                 is_successful=True,
                 tags=["高温清凉"],
             )
@@ -85,7 +95,7 @@ def main():
 
     # 打印启动信息
     print("=" * 60)
-    print("  AI 社区餐桌预测引擎 v2.0")
+    print("  AI生鲜助手 v2.0")
     print("  LLM Agentic Workflow · 即时烹饪场景经营平台")
     print("=" * 60)
     print(f"  模式: {'Mock（未配置API Key）' if config.mock_mode else '真实LLM'}")

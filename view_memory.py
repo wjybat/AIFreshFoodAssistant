@@ -79,7 +79,13 @@ def show_all():
             print(f"  临期商品: {', '.join(expiring)}")
         print(f"  推荐菜单: {menu_names}")
         if ve:
-            print(f"  效果: 减损{ve.get('loss_reduction','')} | 客单价{ve.get('ticket_lift','')}")
+            loss_reduction = ve.get("loss_reduction", "")
+            ticket_lift = ve.get("ticket_lift", "")
+            if isinstance(loss_reduction, dict):
+                loss_reduction = f"{loss_reduction.get('value', '')}{loss_reduction.get('unit', '')}"
+            if isinstance(ticket_lift, dict):
+                ticket_lift = f"{ticket_lift.get('value', '')}{ticket_lift.get('unit', '')}"
+            print(f"  效果: 减损{loss_reduction} | 客单价{ticket_lift}")
         if tags_list:
             print(f"  标签: {', '.join(tags_list)}")
         print("-" * 70)
@@ -111,7 +117,12 @@ def reset():
             "output": {
                 "scenario_tag": "雨天晚餐·家庭客群",
                 "menus": [{"dish": "青椒肉丝"}, {"dish": "麻婆豆腐"}, {"dish": "紫菜蛋花汤"}],
-                "value_estimate": {"loss_reduction": "¥2,840", "ticket_lift": "+18%"},
+                "value_estimate": {
+                    "loss_reduction": {"value": 2840, "unit": "元", "baseline": 4100, "reason": "按临期库存成本与雨天晚餐预计消化量估算。"},
+                    "ticket_lift": {"value": 18, "unit": "%", "baseline": 0, "reason": "三菜套餐叠加熟食加购，理想化估算客单价提升。"},
+                    "cross_sell_rate": {"value": 3.8, "unit": "件/单", "baseline": 1.1, "reason": "主菜、配菜、汤品与熟食形成多品类联动。"},
+                    "member_open_rate": {"value": 27, "unit": "%", "baseline": 16, "reason": "雨天晚餐场景在下班前定时触达家庭客群。"},
+                },
             },
         },
         {
@@ -125,7 +136,12 @@ def reset():
             "output": {
                 "scenario_tag": "高温清凉·白领午间",
                 "menus": [{"dish": "凉拌黄瓜木耳"}, {"dish": "冬瓜排骨汤"}, {"dish": "绿豆汤"}],
-                "value_estimate": {"loss_reduction": "¥3,120", "ticket_lift": "+22%"},
+                "value_estimate": {
+                    "loss_reduction": {"value": 3120, "unit": "元", "baseline": 4500, "reason": "按高温易损库存成本与午间预计消化量估算。"},
+                    "ticket_lift": {"value": 22, "unit": "%", "baseline": 0, "reason": "清凉套餐组合较单品购买形成更高客单。"},
+                    "cross_sell_rate": {"value": 3.6, "unit": "件/单", "baseline": 1.2, "reason": "凉菜、汤品和饮品形成午间连带组合。"},
+                    "member_open_rate": {"value": 31, "unit": "%", "baseline": 18, "reason": "高温午间主题与白领客群需求匹配度较高。"},
+                },
             },
         },
     ]

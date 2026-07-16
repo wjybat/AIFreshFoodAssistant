@@ -34,7 +34,7 @@ memory_store = MemoryStore(config.MEMORY_DB)
 llm_engine = LLMEngine(memory_store)
 
 app = FastAPI(
-    title="AI 社区餐桌预测引擎",
+    title="AI生鲜助手",
     description="基于 LLM Agentic Workflow 的即时烹饪场景经营平台",
     version="2.1",
 )
@@ -301,7 +301,12 @@ def _seed_memory():
             "output": {
                 "scenario_tag": "雨天晚餐·家庭客群",
                 "menus": [{"dish": "青椒肉丝"}, {"dish": "麻婆豆腐"}, {"dish": "紫菜蛋花汤"}],
-                "value_estimate": {"loss_reduction": "¥2,840", "ticket_lift": "+18%"},
+                "value_estimate": {
+                    "loss_reduction": {"value": 2840, "unit": "元", "baseline": 4100, "reason": "按临期库存成本与雨天晚餐预计消化量估算。"},
+                    "ticket_lift": {"value": 18, "unit": "%", "baseline": 0, "reason": "三菜套餐叠加熟食加购，理想化估算客单价提升。"},
+                    "cross_sell_rate": {"value": 3.8, "unit": "件/单", "baseline": 1.1, "reason": "主菜、配菜、汤品与熟食形成多品类联动。"},
+                    "member_open_rate": {"value": 27, "unit": "%", "baseline": 16, "reason": "雨天晚餐场景在下班前定时触达家庭客群。"},
+                },
             },
         },
         {
@@ -315,7 +320,12 @@ def _seed_memory():
             "output": {
                 "scenario_tag": "高温清凉·白领午间",
                 "menus": [{"dish": "凉拌黄瓜木耳"}, {"dish": "冬瓜排骨汤"}, {"dish": "绿豆汤"}],
-                "value_estimate": {"loss_reduction": "¥3,120", "ticket_lift": "+22%"},
+                "value_estimate": {
+                    "loss_reduction": {"value": 3120, "unit": "元", "baseline": 4500, "reason": "按高温易损库存成本与午间预计消化量估算。"},
+                    "ticket_lift": {"value": 22, "unit": "%", "baseline": 0, "reason": "清凉套餐组合较单品购买形成更高客单。"},
+                    "cross_sell_rate": {"value": 3.6, "unit": "件/单", "baseline": 1.2, "reason": "凉菜、汤品和饮品形成午间连带组合。"},
+                    "member_open_rate": {"value": 31, "unit": "%", "baseline": 18, "reason": "高温午间主题与白领客群需求匹配度较高。"},
+                },
             },
         },
     ]

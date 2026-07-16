@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 社区餐桌预测引擎</title>
+<title>AI生鲜助手</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -220,22 +220,31 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== 价值预估 ===== */
 .value-card{margin-top:0}
 .value-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}
-.value-card .kpi{padding:12px}
-.value-card .kpi .k-val{font-size:15px;line-height:1.25;overflow-wrap:anywhere}
-.value-card .compare-chart{grid-column:1/-1;padding:12px}
-.kpi{background:var(--line2);border-radius:10px;padding:12px}
-.kpi .k-label{font-size:11px;color:var(--ink2);display:flex;align-items:center;gap:4px}
-.kpi .k-val{font-size:15px;font-weight:700;margin-top:5px;line-height:1.2}
-.kpi .k-val.good{color:var(--green)}
-.kpi .k-val.up{color:#e8590c}
-.kpi .k-sub{font-size:10.5px;color:var(--ink3);margin-top:4px}
-.compare-chart{background:var(--line2);border-radius:10px;padding:12px}
-.compare-chart .cc-title{font-size:11.5px;font-weight:700;margin-bottom:6px;color:var(--ink2)}
-.cc-bars{display:flex;flex-direction:column;gap:7px;margin-top:4px}
-.cc-bar{display:flex;align-items:center;gap:8px;font-size:10.5px}
-.cc-bar .cc-l{width:56px;color:var(--ink2);flex-shrink:0}
-.cc-bar .cc-track{flex:1;display:flex;gap:3px;min-width:0}
-.cc-bar .seg{height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9.5px;color:#fff;font-weight:600;overflow:hidden;white-space:nowrap;padding:0 4px}
+.value-card .card-head h3{font-size:13px}
+.forecast-card{--chart-color:var(--brand);min-width:0;padding:11px;background:#f8fafc;border:1px solid var(--line2);border-radius:8px;display:flex;flex-direction:column}
+.forecast-card.loss{--chart-color:#16a34a}.forecast-card.ticket{--chart-color:#ea580c}.forecast-card.cross{--chart-color:#2563eb}.forecast-card.member{--chart-color:#0d9488}
+.forecast-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-height:39px}
+.forecast-label{font-size:10.5px;color:var(--ink2);font-weight:600;line-height:1.35}
+.forecast-value{font-size:15px;color:var(--chart-color);font-weight:800;line-height:1.2;text-align:right;overflow-wrap:anywhere}
+.forecast-chart{height:78px;display:flex;align-items:center;justify-content:center;margin:5px 0 7px}
+.single-bar-chart{width:100%}
+.metric-bar-track{height:15px;background:#e2e8f0;border-radius:3px;overflow:hidden;position:relative}
+.metric-bar-fill{display:block;height:100%;min-width:0;background:var(--chart-color);border-radius:3px;transition:width .55s ease}
+.metric-axis{display:flex;justify-content:space-between;gap:6px;margin-top:5px;color:var(--ink3);font-size:9px;line-height:1.25}
+.metric-axis span:last-child{text-align:right}
+.compare-bars{width:100%;display:flex;flex-direction:column;gap:8px}
+.compare-row{display:grid;grid-template-columns:26px minmax(0,1fr) 30px;align-items:center;gap:5px;font-size:9px;color:var(--ink3)}
+.compare-row b{font-size:9.5px;color:var(--ink2);text-align:right;font-weight:700}
+.compare-track{height:10px;background:#e2e8f0;border-radius:2px;overflow:hidden}
+.compare-fill{display:block;height:100%;border-radius:2px;background:#94a3b8}
+.compare-row.target .compare-fill{background:var(--chart-color)}
+.compare-row.target b{color:var(--chart-color)}
+.metric-donut{--progress:0%;width:72px;height:72px;border-radius:50%;position:relative;display:grid;place-items:center;background:conic-gradient(var(--chart-color) var(--progress),#e2e8f0 0)}
+.metric-donut::after{content:'';position:absolute;inset:9px;border-radius:50%;background:#f8fafc}
+.metric-donut span{position:relative;z-index:1;font-size:12px;font-weight:800;color:var(--chart-color)}
+.forecast-context{min-height:14px;text-align:center;color:var(--ink3);font-size:9px;line-height:1.35;margin-top:-3px}
+.forecast-reason{border-top:1px dashed var(--line);padding-top:7px;margin-top:auto;font-size:10px;color:var(--ink2);line-height:1.5;overflow-wrap:anywhere}
+.forecast-empty{font-size:10px;color:var(--ink3);text-align:center}
 
 /* ===== 菜谱弹窗 ===== */
 .modal-overlay{position:fixed;inset:0;background:rgba(10,20,40,.55);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
@@ -327,6 +336,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== 响应式 ===== */
 @media(max-width:1280px){.grid{grid-template-columns:1fr}.value-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#dataVizBody{grid-template-columns:1fr}}
 @media(max-width:700px){
+  .topbar{position:static;flex-wrap:wrap;padding:12px 14px;gap:9px}.brand{width:100%}.topbar-right{width:100%;margin-left:0;display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:7px}.status-chip{grid-column:1/-1;justify-content:center;min-width:0}.think-toggle,.history-btn,.gen-btn{justify-content:center;padding:8px 9px;white-space:nowrap}.gen-btn{min-width:0}
   .agent-trace-head{align-items:flex-start;padding:11px 12px}.agent-trace-head .head-icon{width:28px;height:28px}.agent-trace-head .head-sub{display:none}.agent-trace-head .badge{margin-top:3px}.agent-trace-live{display:none}
   .agent-flow{min-height:0;max-height:520px;flex-direction:column;align-items:stretch;padding:22px 14px;overflow-x:hidden;overflow-y:auto}
   .flow-col{width:100%}.flow-col.parallel{width:100%;padding:18px 9px 9px}.flow-node{width:100%;min-height:0}
@@ -351,7 +361,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 <div class="topbar">
   <div class="brand">
     <div class="brand-logo">🍽️</div>
-    <div><h1>AI 社区餐桌预测引擎</h1><p>LLM Agentic Workflow · 即时烹饪场景经营平台</p></div>
+    <div><h1>AI生鲜助手</h1><p>LLM Agentic Workflow · 即时烹饪场景经营平台</p></div>
   </div>
   <div class="topbar-right">
     <div class="status-chip" id="statusChip"><span class="status-dot" id="statusDot"></span><span id="statusText">检测中...</span></div>
@@ -385,12 +395,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
   </div>
 
-  <!-- 中列：数据可视化 + AI引擎 -->
+  <!-- 中列：AI引擎 + 数据可视化 -->
   <div class="col">
-    <div class="card" id="dataVizCard" style="display:none">
-      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📊</div><h3>数据可视化</h3></div>
-      <div class="card-body" id="dataVizBody"></div>
-    </div>
     <div class="card engine-card" style="flex:1">
       <div class="card-head"><div class="h-icon" style="background:var(--brand-l);color:var(--brand-d)">🧠</div><h3>LLM Agentic Workflow</h3><span class="sub" id="engineStatus">待命</span></div>
       <div class="card-body" id="engineBody">
@@ -427,6 +433,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
           </div>
         </div>
       </div>
+    </div>
+    <div class="card" id="dataVizCard" style="display:none">
+      <div class="card-head"><div class="h-icon" style="background:var(--green-l);color:var(--green)">📊</div><h3>数据可视化</h3></div>
+      <div class="card-body" id="dataVizBody"></div>
     </div>
   </div>
 
@@ -1371,21 +1381,77 @@ function openChannelPage(path,planId){
   window.location.href=`${path}?plan_id=${encodeURIComponent(planId)}`;
 }
 
+function estimateNumber(value){
+  if(typeof value==='number'&&Number.isFinite(value)) return value;
+  const match=String(value??'').replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);
+  return match?Number(match[0]):null;
+}
+
+function normalizeEstimateMetric(raw,defaultUnit){
+  const structured=raw&&typeof raw==='object'&&!Array.isArray(raw);
+  const legacyLabel=structured?'':String(raw??'').trim();
+  const scalarLegacy=/^[+¥]?\s*[\d,.]+\s*(?:%|元|件\/单)?$/.test(legacyLabel);
+  const value=estimateNumber(structured?raw.value:(scalarLegacy?raw:null));
+  return {
+    value,
+    baseline:estimateNumber(structured?raw.baseline:null),
+    unit:String(structured?(raw.unit||defaultUnit):defaultUnit),
+    reason:String(structured?(raw.reason||''):(Number.isFinite(value)?'':legacyLabel)).trim(),
+    legacyLabel,
+  };
+}
+
+function formatEstimateValue(metric,key){
+  if(!Number.isFinite(metric.value)) return metric.legacyLabel||'待测算';
+  const value=metric.value.toLocaleString('zh-CN',{maximumFractionDigits:1});
+  if(metric.unit==='元'||metric.unit==='CNY') return `¥${value}`;
+  if(metric.unit==='%') return `${key==='ticket_lift'&&metric.value>0?'+':''}${value}%`;
+  return `${value}${metric.unit}`;
+}
+
+function estimateReason(metric){
+  return metric.reason||'历史方案未保存结构化测算依据。';
+}
+
+function renderEstimateChart(key,metric){
+  if(!Number.isFinite(metric.value)){
+    return '<div class="forecast-chart"><div class="forecast-empty">暂无可图表化数值</div></div><div class="forecast-context">等待结构化测算</div>';
+  }
+
+  if(key==='member_open_rate'){
+    const progress=Math.min(100,Math.max(0,metric.value));
+    const baseline=Number.isFinite(metric.baseline)?`当前参考 ${metric.baseline}%`:'预计打开率';
+    return `<div class="forecast-chart"><div class="metric-donut" style="--progress:${progress}%" role="img" aria-label="预计会员打开率 ${escapeHtml(formatEstimateValue(metric,key))}"><span>${escapeHtml(formatEstimateValue(metric,key))}</span></div></div><div class="forecast-context">${escapeHtml(baseline)}</div>`;
+  }
+
+  if(key==='cross_sell_rate'){
+    const baseline=Number.isFinite(metric.baseline)?metric.baseline:0;
+    const scale=Math.max(metric.value,baseline,1);
+    const currentWidth=Math.min(100,Math.max(0,baseline/scale*100));
+    const targetWidth=Math.min(100,Math.max(0,metric.value/scale*100));
+    return `<div class="forecast-chart"><div class="compare-bars" role="img" aria-label="连带率由 ${baseline} 提升至 ${escapeHtml(formatEstimateValue(metric,key))}"><div class="compare-row"><span>当前</span><div class="compare-track"><i class="compare-fill" style="width:${currentWidth}%"></i></div><b>${baseline}</b></div><div class="compare-row target"><span>预测</span><div class="compare-track"><i class="compare-fill" style="width:${targetWidth}%"></i></div><b>${metric.value}</b></div></div></div><div class="forecast-context">单位：${escapeHtml(metric.unit)}</div>`;
+  }
+
+  const chartMax=key==='ticket_lift'?100:(Number.isFinite(metric.baseline)&&metric.baseline>0?metric.baseline:metric.value);
+  const progress=Math.min(100,Math.max(0,metric.value/Math.max(chartMax,1)*100));
+  const maxLabel=key==='ticket_lift'?'100%':Number.isFinite(metric.baseline)?`风险额 ${formatEstimateValue({...metric,value:metric.baseline},key)}`:formatEstimateValue(metric,key);
+  return `<div class="forecast-chart"><div class="single-bar-chart" role="img" aria-label="${escapeHtml(formatEstimateValue(metric,key))}"><div class="metric-bar-track"><i class="metric-bar-fill" style="width:${progress}%"></i></div><div class="metric-axis"><span>0</span><span>${escapeHtml(maxLabel)}</span></div></div></div><div class="forecast-context">${key==='ticket_lift'?'客单价预计提升幅度':'预计可减少的损耗金额'}</div>`;
+}
+
 function renderValue(r){
   const ve=r.value_estimate||{};
+  const metrics=[
+    {key:'loss_reduction',label:'预计减损',icon:'♻️',unit:'元',className:'loss'},
+    {key:'ticket_lift',label:'客单价提升',icon:'💰',unit:'%',className:'ticket'},
+    {key:'cross_sell_rate',label:'连带率',icon:'🛒',unit:'件/单',className:'cross'},
+    {key:'member_open_rate',label:'会员打开率',icon:'📱',unit:'%',className:'member'},
+  ];
   document.getElementById('valueCard').style.display='block';
   document.getElementById('valueCard').classList.add('fade-up');
-  document.getElementById('valueGrid').innerHTML=`
-    <div class="kpi"><div class="k-label">♻️ 预计减损</div><div class="k-val good">${escapeHtml(ve.loss_reduction||'')}</div></div>
-    <div class="kpi"><div class="k-label">💰 客单价提升</div><div class="k-val up">${escapeHtml(ve.ticket_lift||'')}</div></div>
-    <div class="kpi"><div class="k-label">🛒 连带率</div><div class="k-val up">${escapeHtml(ve.cross_sell_rate||'')}</div></div>
-    <div class="kpi"><div class="k-label">📱 会员打开率</div><div class="k-val up">${escapeHtml(ve.member_open_rate||'')}</div></div>
-    <div class="compare-chart"><div class="cc-title">📊 传统打折 vs 场景化经营</div><div class="cc-bars">
-      <div class="cc-bar"><span class="cc-l">临期售价</span><div class="cc-track"><div class="seg" style="width:50%;background:#94a3b8">5折</div><div class="seg" style="width:80%;background:var(--green)">8折</div></div></div>
-      <div class="cc-bar"><span class="cc-l">连带件数</span><div class="cc-track"><div class="seg" style="width:25%;background:#94a3b8">1.1</div><div class="seg" style="width:80%;background:var(--green)">3.8</div></div></div>
-      <div class="cc-bar"><span class="cc-l">客单价</span><div class="cc-track"><div class="seg" style="width:55%;background:#94a3b8">¥38</div><div class="seg" style="width:90%;background:var(--green)">¥62</div></div></div>
-      <div class="cc-bar"><span class="cc-l">损耗率</span><div class="cc-track"><div class="seg" style="width:80%;background:#94a3b8">8%</div><div class="seg" style="width:15%;background:var(--green)">1.5%</div></div></div>
-    </div></div>`;
+  document.getElementById('valueGrid').innerHTML=metrics.map(config=>{
+    const metric=normalizeEstimateMetric(ve[config.key],config.unit);
+    return `<section class="forecast-card ${config.className}"><div class="forecast-head"><div class="forecast-label">${config.icon} ${config.label}</div><div class="forecast-value">${escapeHtml(formatEstimateValue(metric,config.key))}</div></div>${renderEstimateChart(config.key,metric)}<p class="forecast-reason">${escapeHtml(estimateReason(metric))}</p></section>`;
+  }).join('');
 }
 
 /* ============================================================ 菜谱弹窗 ============================================================ */

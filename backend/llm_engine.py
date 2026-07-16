@@ -17,6 +17,7 @@ import json
 import re
 import asyncio
 import logging
+import math
 from html import escape
 from typing import AsyncGenerator
 
@@ -463,6 +464,14 @@ class LLMEngine:
                 "original_price": total_price,
             })
 
+        at_risk_cost = sum(
+            item.get("cost", 0) * item.get("stock", 0)
+            for item in expiring
+        )
+        loss_reduction = round(at_risk_cost * 0.1)
+        loss_baseline = max(loss_reduction, round(at_risk_cost * 0.15))
+        cross_sell_target = min(5, round(max(1, len(menus)) + 0.8, 1))
+
         return {
             "scenario_tag": f"{input_data.get('weather',{}).get('description','')}·{input_data.get('community',{}).get('type','')}",
             "menus": menus,
@@ -480,10 +489,33 @@ class LLMEngine:
                 "entrance": "场景包入口",
             },
             "value_estimate": {
-                "loss_reduction": f"¥{sum(item.get('cost',0)*item.get('stock',0)*0.1 for item in expiring):.0f}",
-                "ticket_lift": "+18%",
-                "cross_sell_rate": "3.8件/单",
-                "member_open_rate": "+27%",
+                "loss_reduction": {
+                    "value": loss_reduction,
+                    "unit": "元",
+                    "baseline": loss_baseline,
+                    "reason": (
+                        f"按 {len(expiring)} 项临期库存成本估算，假设方案可减少约"
+                        "三分之二的预期损耗。"
+                    ),
+                },
+                "ticket_lift": {
+                    "value": 18,
+                    "unit": "%",
+                    "baseline": 0,
+                    "reason": "套餐组合叠加熟食加购，理想化估算客单价较常规购买提升 18%。",
+                },
+                "cross_sell_rate": {
+                    "value": cross_sell_target,
+                    "unit": "件/单",
+                    "baseline": 1.1,
+                    "reason": f"本次 {len(menus)} 道菜与熟食联动，预计带动多品类同单购买。",
+                },
+                "member_open_rate": {
+                    "value": 27,
+                    "unit": "%",
+                    "baseline": 16,
+                    "reason": "结合天气、客流高峰与晚餐场景定时触达，理想化估算打开率为 27%。",
+                },
             },
         }
 
@@ -535,6 +567,54 @@ class LLMEngine:
             for menu in result["menus"]
         ):
             raise ValueError("menus 中每项都必须包含 dish")
+
+        estimate = result["value_estimate"]
+        metric_units = {
+            "loss_reduction": "元",
+            "ticket_lift": "%",
+            "cross_sell_rate": "件/单",
+            "member_open_rate": "%",
+        }
+        missing_metrics = [name for name in metric_units if name not in estimate]
+        if missing_metrics:
+            raise ValueError("value_estimate 缺少字段: " + ", ".join(missing_metrics))
+
+        for name, expected_unit in metric_units.items():
+            metric = estimate[name]
+            if not isinstance(metric, dict):
+                raise ValueError(f"value_estimate.{name} 必须是对象")
+            missing_fields = [
+                field for field in ("value", "unit", "baseline", "reason")
+                if field not in metric
+            ]
+            if missing_fields:
+                raise ValueError(
+                    f"value_estimate.{name} 缺少字段: "
+                    + ", ".join(missing_fields)
+                )
+            for numeric_field in ("value", "baseline"):
+                numeric_value = metric[numeric_field]
+                if (
+                    isinstance(numeric_value, bool)
+                    or not isinstance(numeric_value, (int, float))
+                    or not math.isfinite(numeric_value)
+                    or numeric_value < 0
+                ):
+                    raise ValueError(
+                        f"value_estimate.{name}.{numeric_field} 必须是非负有限数字"
+                    )
+            if metric["unit"] != expected_unit:
+                raise ValueError(
+                    f"value_estimate.{name}.unit 必须是 {expected_unit}"
+                )
+            if not isinstance(metric["reason"], str) or not metric["reason"].strip():
+                raise ValueError(f"value_estimate.{name}.reason 不能为空")
+
+        if estimate["loss_reduction"]["baseline"] < estimate["loss_reduction"]["value"]:
+            raise ValueError("预计减损金额不能高于未干预预计损耗金额")
+        for name in ("ticket_lift", "member_open_rate"):
+            if estimate[name]["value"] > 100 or estimate[name]["baseline"] > 100:
+                raise ValueError(f"value_estimate.{name} 的百分比不能超过 100")
 
     def _deploy_recipe_pages(self, result: dict, input_data: dict) -> dict:
         """
@@ -666,7 +746,7 @@ body{{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;backgroun
   </div>
   <div class="footer">
     <div class="logo">🍽️</div>
-    <div class="name">AI 社区餐桌预测引擎</div>
+    <div class="name">AI生鲜助手</div>
     <div class="desc">{store_name} · {scenario_tag}</div>
   </div>
 </div>

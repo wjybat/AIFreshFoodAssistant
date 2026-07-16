@@ -17,7 +17,7 @@ button{font:inherit;cursor:pointer;border:0}.topbar{display:flex;align-items:cen
 </style>
 </head>
 <body>
-<main class="shell"><header class="topbar"><div class="brand"><div class="brand-mark">🏪</div><div><h1>门店负责人决策大屏</h1><p>AI 社区餐桌预测引擎 · 方案执行确认</p></div></div><button class="back-btn" onclick="history.back()">返回运营驾驶舱</button></header><div id="dashboard"><div class="error">正在加载今日推荐方案...</div></div></main>
+<main class="shell"><header class="topbar"><div class="brand"><div class="brand-mark">🏪</div><div><h1>门店负责人决策大屏</h1><p>AI生鲜助手 · 方案执行确认</p></div></div><button class="back-btn" onclick="history.back()">返回运营驾驶舱</button></header><div id="dashboard"><div class="error">正在加载今日推荐方案...</div></div></main>
 <script>
 const planId=new URLSearchParams(location.search).get('plan_id');
 const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
@@ -25,6 +25,7 @@ let activePlan=null;
 
 function decisionLabel(decision){return decision==='accepted'?'已接受执行':decision==='rejected'?'已拒绝执行':'待负责人确认';}
 function mapLabel(value,fallback){return escapeHtml(value||fallback);}
+function estimateText(metric,key){if(!metric||typeof metric!=='object')return metric||'-';const value=metric.value;if(typeof value!=='number'||!Number.isFinite(value))return '-';const formatted=value.toLocaleString('zh-CN',{maximumFractionDigits:1});if(metric.unit==='元'||metric.unit==='CNY')return `¥${formatted}`;if(metric.unit==='%')return `${key==='ticket_lift'&&value>0?'+':''}${formatted}%`;return `${formatted}${metric.unit||''}`;}
 function renderDashboard(plan){
   activePlan=plan;const result=plan.result||{};const estimate=result.value_estimate||{};const decision=plan.decision||'waiting';const locked=decision!=='waiting';
   const menus=(result.menus||[]).map(dish=>`<div class="package"><div class="dish-icon">${escapeHtml(dish.emoji||'🍳')}</div><div class="dish-info"><div class="dish-name">${escapeHtml(dish.dish)}</div><div class="dish-meta">${escapeHtml(dish.role||'推荐菜品')} · ${escapeHtml(dish.cook_time||'即配即做')}</div></div><div class="dish-price">¥${escapeHtml(dish.package_price)}</div></div>`).join('');
@@ -32,7 +33,7 @@ function renderDashboard(plan){
   const map=result.display_plan||{};
   document.getElementById('dashboard').innerHTML=`
     <section class="hero"><div><div class="eyebrow">TODAY'S AI RECOMMENDATION</div><h2>${escapeHtml(result.scenario_tag||'今日门店推荐方案')}</h2><p>${escapeHtml(plan.input_context?.store_info?.store_name||'当前门店')} · 方案生成于 ${new Date(plan.created_at).toLocaleString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</p></div><span class="state ${decision}">${decisionLabel(plan.decision)}</span></section>
-    <section class="summary"><div class="metric"><strong>${escapeHtml(result.cross_sell||'今日推荐组合')}</strong><span>组合与菜谱方案</span></div><div class="metric good"><strong>${escapeHtml(estimate.loss_reduction||'-')}</strong><span>预计减损</span></div><div class="metric warm"><strong>${escapeHtml(estimate.ticket_lift||'-')}</strong><span>客单价提升</span></div><div class="metric"><strong>${escapeHtml(estimate.cross_sell_rate||'-')}</strong><span>预计连带率</span></div></section>
+    <section class="summary"><div class="metric"><strong>${escapeHtml(result.cross_sell||'今日推荐组合')}</strong><span>组合与菜谱方案</span></div><div class="metric good"><strong>${escapeHtml(estimateText(estimate.loss_reduction,'loss_reduction'))}</strong><span>预计减损</span></div><div class="metric warm"><strong>${escapeHtml(estimateText(estimate.ticket_lift,'ticket_lift'))}</strong><span>客单价提升</span></div><div class="metric"><strong>${escapeHtml(estimateText(estimate.cross_sell_rate,'cross_sell_rate'))}</strong><span>预计连带率</span></div></section>
     <section class="layout"><div class="panel"><div class="panel-head"><h3>系统推荐组合商品与菜谱</h3><span>${(result.menus||[]).length} 道菜</span></div><div class="panel-body"><div class="package-list">${menus||'<div class="error">暂无菜品方案</div>'}</div></div></div>
     <div class="panel"><div class="panel-head"><h3>建议陈列图</h3><span>门店动线</span></div><div class="panel-body"><div class="display-map"><div class="map-label map-entry">入口<br>${mapLabel(map.entrance,'场景包入口')}</div><div class="map-label map-main">主推堆头<br>${mapLabel(map.main,'今日推荐')}</div><div class="map-label map-side">配菜区<br>${mapLabel(map.side,'配菜区')}</div><div class="map-label map-cooked">熟食联动<br>${mapLabel(map.cooked,'熟食联动')}</div></div><p class="map-caption">入口引流，主推岛台承接，配菜与熟食形成连带动线。</p></div></div>
     <div class="panel"><div class="panel-head"><h3>员工执行指令</h3><span>下发后可执行</span></div><div class="panel-body"><div class="task-list">${tasks||'<div class="error">暂无员工任务</div>'}</div></div></div>
