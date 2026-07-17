@@ -1418,11 +1418,19 @@ function alignSideRails(){
   const gridTop=grid.getBoundingClientRect().top+window.scrollY;
   const mainHeight=mainColumn.offsetHeight;
   const viewportBottom=window.scrollY+window.innerHeight;
+  const topbar=document.querySelector('.topbar');
+  const app=document.querySelector('.app');
+  const appTopPadding=app?parseFloat(getComputedStyle(app).paddingTop)||0:0;
+  const viewportContentTop=window.scrollY+(topbar?.getBoundingClientRect().bottom||0)+appTopPadding;
 
   sideRails.forEach(rail=>{
     const railHeight=rail.offsetHeight;
-    const viewportOffset=Math.max(0,viewportBottom-gridTop-railHeight);
     const maxOffset=Math.max(0,mainHeight-railHeight);
+    const valueCard=rail.querySelector('#valueCard');
+    const alignToTop=valueCard?.classList.contains('collapsed');
+    const viewportOffset=alignToTop
+      ?Math.max(0,viewportContentTop-gridTop)
+      :Math.max(0,viewportBottom-gridTop-railHeight);
     rail.style.setProperty('--side-rail-offset',`${Math.round(Math.min(viewportOffset,maxOffset))}px`);
   });
 }
