@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0e2a3a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
 <title>AI生鲜助手</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -22,6 +24,8 @@
 }
 body{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.topbar :focus-visible{outline-color:#7dd8d6}
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-thumb{background:#cdd6e4;border-radius:8px}
 
@@ -35,6 +39,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .status-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);padding:7px 14px;border-radius:10px;font-size:12px}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
 .status-dot.mock{background:var(--amber)}
+.status-dot.offline{background:var(--red)}
 .history-btn{padding:9px 12px;border:1px solid rgba(255,255,255,.28);border-radius:8px;color:#fff;background:rgba(255,255,255,.08);font-size:12.5px;font-weight:600;transition:.2s}
 .history-btn:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.5)}
 .gen-btn{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:10px 22px;border-radius:11px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(249,115,22,.45);transition:.2s}
@@ -67,6 +72,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .data-file-btn .f-icon{font-size:16px}
 .data-file-btn .f-name{flex:1}
 .data-file-btn .f-type{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--brand);color:#fff}
+.data-file-btn.is-loading{pointer-events:none}
+.data-file-btn.is-loading .f-type{display:none}
+.data-file-btn.is-loading::after{content:'';width:13px;height:13px;border:2px solid rgba(13,139,138,.25);border-top-color:var(--brand-d);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 
 /* ===== 数据可视化（宽列双栏布局） ===== */
 #dataVizBody{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
@@ -96,7 +104,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .community-stat .l{font-size:11px;color:var(--ink3);margin-top:1px}
 
 /* ===== AI 推理区 ===== */
-.engine-card{min-height:300px}
+.engine-card{min-height:300px;scroll-margin-top:88px}
 .engine-idle{text-align:center;padding:40px 20px;color:var(--ink3)}
 .engine-idle .big{font-size:50px;margin-bottom:12px;opacity:.4}
 .engine-idle p{font-size:13px}
@@ -148,7 +156,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .flow-node .fn-state{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:900;background:#eef2ff;color:#4338ca;flex-shrink:0;position:relative;border:1px solid #c7d2fe}
 .flow-node .fn-kind{margin-left:auto;font-size:8.5px;padding:2px 7px;border-radius:999px;background:#eef2ff;color:#6366f1;font-weight:800;letter-spacing:.35px}
 .flow-node .fn-label{font-size:12px;font-weight:800;color:#312e81;line-height:1.4;margin-top:7px}
-.flow-node .fn-detail{font-size:10.5px;color:#64748b;margin-top:4px;line-height:1.48;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.flow-node .fn-detail{font-size:10.5px;color:#64748b;margin-top:4px;line-height:1.48;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .flow-node .fn-meta{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
 .flow-node .fn-meta:empty{display:none}
 .flow-node .fn-meta span{font-size:9px;color:#64748b;background:#f1f5f9;padding:2px 6px;border-radius:5px;font-family:Consolas,monospace;overflow-wrap:anywhere}
@@ -206,6 +214,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dish-desc{font-size:11px;color:var(--ink2);margin-top:4px}
 .dish-price{margin-top:6px;font-size:13px;font-weight:700;color:var(--red)}
 .dish-price .old{font-size:11px;color:var(--ink3);text-decoration:line-through;font-weight:400;margin-left:4px}
+.dish-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.recipe-image-btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:7px 11px;border:1px solid rgba(13,139,138,.28);border-radius:8px;background:var(--brand-l);color:var(--brand-d);font-size:11px;font-weight:700;line-height:1.2;transition:.2s}
+.recipe-image-btn:hover{border-color:var(--brand);background:#d8f4f2}
+.recipe-image-btn:disabled{opacity:.65;cursor:wait;transform:none}
+.recipe-image-btn.is-loading::before{content:"";width:12px;height:12px;margin-right:6px;border:2px solid rgba(13,139,138,.25);border-top-color:var(--brand-d);border-radius:50%;animation:spin .8s linear infinite}
+.recipe-image-toolbar{display:flex;align-items:flex-end;gap:10px;margin:0 0 12px;padding:12px;border:1px solid rgba(13,139,138,.24);border-radius:11px;background:linear-gradient(135deg,#f0fdfa,var(--brand-l))}
+.recipe-image-toolbar .recipe-image-btn{min-height:38px}
+.recipe-image-field{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+.recipe-image-field span{font-size:11px;font-weight:700;color:var(--brand-d)}
+.recipe-image-field select{width:100%;height:38px;padding:0 32px 0 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:12px;outline:none}
+.recipe-image-field select:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(13,139,138,.1)}
+.recipe-image-primary{min-height:38px;padding:9px 16px;background:var(--brand);border-color:var(--brand);color:#fff;font-size:12px;box-shadow:0 5px 14px rgba(13,139,138,.2)}
+.recipe-image-primary:hover{background:var(--brand-d);color:#fff}
 
 /* ===== 场景包 ===== */
 .pkg-main{padding:14px 16px;background:linear-gradient(135deg,var(--brand-l),#f0fdfa)}
@@ -281,6 +302,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .rm-hero{padding:28px 24px 20px;text-align:center;background:linear-gradient(135deg,var(--brand-l),#f0fdfa);position:relative}
 .rm-hero .rm-emoji{font-size:56px;margin-bottom:8px}
 .rm-hero h2{font-size:22px;font-weight:800}
+.rm-image-action{display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--line2);background:#fff}
+.rm-image-action .recipe-image-btn{min-width:132px}
+.rm-image-action span{font-size:11px;color:var(--ink3)}
 .rm-section{padding:16px 24px;border-bottom:1px solid var(--line2)}
 .rm-section h4{font-size:14px;font-weight:700;margin-bottom:10px}
 .rm-ingr-table{width:100%;border-collapse:collapse}
@@ -357,8 +381,30 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .panel-output-body .md-content th{background:#e8eaf0;font-weight:600}
 .panel-output-body .streaming-content{color:#2a2a3a}
 
+/* ===== 轻提示 ===== */
+.toast-stack{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2000;width:calc(100% - 32px);max-width:440px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:8px;max-width:100%;padding:11px 16px;border-radius:11px;background:#16233b;color:#e8eef7;font-size:12.5px;line-height:1.5;box-shadow:0 10px 30px rgba(9,18,35,.35);pointer-events:auto;opacity:1;transform:translateY(0);transition:opacity .3s ease,transform .3s ease;animation:fadeUp .25s ease}
+.toast .t-icon{flex-shrink:0}
+.toast.success{background:#0c5e50}
+.toast.error{background:#7f1d1d}
+.toast.hide{opacity:0;transform:translateY(8px)}
+
 /* ===== 响应式 ===== */
 @media(max-width:1280px){.grid{grid-template-columns:1fr}.side-col{transform:none!important}.value-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#dataVizBody{grid-template-columns:1fr}}
+@media(max-width:860px){
+  .topbar{flex-wrap:wrap;padding:12px 14px;gap:10px 12px}
+  .brand{min-width:0;flex:1}
+  .brand h1{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand p{display:none}
+  .brand-logo{width:36px;height:36px;font-size:18px;border-radius:9px;flex-shrink:0}
+  .topbar-right{margin-left:0;width:100%;flex-wrap:wrap;gap:8px}
+  .status-chip{min-width:0;max-width:100%}
+  #statusText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .think-toggle{padding:7px 11px}
+  .history-btn{padding:9px 11px}
+  .gen-btn{flex:1;justify-content:center;min-width:150px;padding:10px 14px}
+  .engine-card{scroll-margin-top:124px}
+}
 @media(max-width:700px){
   .topbar{position:static;flex-wrap:wrap;padding:12px 14px;gap:9px}.brand{width:100%}.topbar-right{width:100%;margin-left:0;display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:7px}.status-chip{grid-column:1/-1;justify-content:center;min-width:0}.think-toggle,.history-btn,.gen-btn{justify-content:center;padding:8px 9px;white-space:nowrap}.gen-btn{min-width:0}
   .agent-trace-head{align-items:flex-start;padding:11px 12px}.agent-trace-head .head-icon{width:28px;height:28px}.agent-trace-head .head-sub{display:none}.agent-trace-head .badge{margin-top:3px}.agent-trace-live{display:none}
@@ -373,8 +419,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   .flow-link.done::after{border-left-color:transparent;border-top-color:#4ade80}.flow-link.failed::after{border-left-color:transparent;border-top-color:#fca5a5}
   .flow-link .flow-particle{top:0;left:50%;margin:-1px 0 0 -3.5px}.flow-link.flowing .flow-particle{animation-name:linkParticleY}
   .value-grid{grid-template-columns:1fr}
+  .rm-image-action{align-items:stretch;flex-direction:column}.rm-image-action .recipe-image-btn{width:100%}
+  .recipe-image-toolbar{align-items:stretch;flex-direction:column}.recipe-image-toolbar .recipe-image-btn{width:100%}
+  .app{padding:14px 12px 32px}
+  .modal-overlay{padding:10px}
+  .rm-qr{flex-direction:column;text-align:center}
+  .rm-qr-img{margin:0 auto}
 }
 @media(prefers-reduced-motion:reduce){.agent-trace *{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}html{scroll-behavior:auto}}
 @keyframes dashFlowY{to{background-position:0 24px}}
 @keyframes linkParticleY{0%{top:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{top:calc(100% - 9px);opacity:0}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -395,7 +448,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <span id="thinkLabel">深度思考</span>
     </button>
     <button class="history-btn" onclick="window.location.href='/recommendation-history'">历史方案</button>
-    <button class="gen-btn" id="genBtn" disabled onclick="generate()"><span>⚡</span><span id="genBtnText">生成今日方案</span></button>
+    <button class="gen-btn" id="genBtn" disabled title="请先选择一个数据文件" onclick="generate()"><span>⚡</span><span id="genBtnText">生成今日方案</span></button>
   </div>
 </div>
 
@@ -421,7 +474,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="card-body" id="engineBody">
         <div class="engine-idle" id="engineIdle">
           <div class="big">🍳</div>
-          <p>引擎就绪 · 选择左侧数据后点击「生成今日方案」</p>
+          <p>引擎就绪 · 选择数据文件后点击「生成今日方案」</p>
           <p class="hint">LLM 将根据 Memory 历史样例 + Skills 领域知识 + 当日数据推理生成菜单候选</p>
         </div>
         <div class="agent-trace" id="agentTrace" data-state="idle" style="display:none">
@@ -435,6 +488,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
         </div>
         <div class="menu-out" id="menuOut">
           <div class="card-head" style="border:none;padding:6px 0 10px"><div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📋</div><h3>今日推荐菜单候选</h3><span class="sub" id="menuMeta"></span></div>
+          <div class="recipe-image-toolbar">
+            <label class="recipe-image-field"><span>选择要生成图片的菜品</span><select id="recipeImageSelect" onchange="updateRecipeImageToolbar()"></select></label>
+            <button type="button" class="recipe-image-btn recipe-image-primary" id="recipeImageToolbarBtn" onclick="generateSelectedRecipeImage(this,event)">🎨 生成菜谱图片</button>
+            <button type="button" class="recipe-image-btn" id="recipeImagesPageBtn" onclick="openRecipeImagesPage(event)">🖼️ 菜谱图片页</button>
+          </div>
           <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="dual-panel" id="dualPanel" style="display:none">
@@ -481,9 +539,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 </div>
 
+<!-- 轻提示 -->
+<div class="toast-stack" id="toastStack" role="status" aria-live="polite"></div>
+
 <!-- 菜谱弹窗 -->
 <div class="modal-overlay" id="recipeModal" onclick="if(event.target===this)closeRecipe()">
-  <div class="modal" id="recipeModalInner"></div>
+  <div class="modal" id="recipeModalInner" role="dialog" aria-modal="true" aria-label="菜谱详情"></div>
 </div>
 
 <script src="/assets/qrcode.min.js"></script>
@@ -499,6 +560,7 @@ let generating=false;
 let currentDisplayData=null;
 let inventoryPage=0;
 const inventoryPageSize=10;
+const recipeImageGenerating=new Set();
 const agentFlowNodes=new Map();
 let agentFlowColumns=[];
 let agentFlowFocusFrame=null;
@@ -510,6 +572,26 @@ function escapeHtml(value){
   return String(value??'').replace(/[&<>"']/g,char=>({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[char]));
+}
+
+/* 非阻塞轻提示：替代 alert，用于错误与操作反馈 */
+function showToast(message,type='info',duration=3600){
+  const stack=document.getElementById('toastStack');
+  if(!stack) return;
+  const toast=document.createElement('div');
+  toast.className=`toast ${type}`;
+  const icon=document.createElement('span');
+  icon.className='t-icon';
+  icon.textContent=type==='success'?'✅':type==='error'?'⚠️':'💡';
+  const text=document.createElement('span');
+  text.textContent=String(message||'');
+  toast.append(icon,text);
+  stack.appendChild(toast);
+  while(stack.children.length>3) stack.firstElementChild.remove();
+  setTimeout(()=>{
+    toast.classList.add('hide');
+    setTimeout(()=>toast.remove(),350);
+  },duration);
 }
 
 function escapeRawHtmlForMarkdown(value){
@@ -603,6 +685,7 @@ async function init(){
     }
   }catch(e){
     document.getElementById('statusText').textContent='后端未连接';
+    document.getElementById('statusDot').classList.add('offline');
   }
 
   // 加载数据文件列表
@@ -642,7 +725,7 @@ async function viewMemory(){
     }
     listEl.style.display='block';
   }catch(e){
-    alert('加载Memory失败: '+e.message);
+    showToast('加载 Memory 失败：'+e.message,'error');
   }
 }
 
@@ -656,9 +739,9 @@ async function resetMemory(){
     // 更新顶栏状态
     const stxt=document.getElementById('statusText');
     stxt.textContent=stxt.textContent.replace(/Memory:\d+条/,`Memory:${d.current_count}条`);
-    alert(d.message);
+    showToast(d.message||'Memory 已重置','success');
   }catch(e){
-    alert('重置失败: '+e.message);
+    showToast('重置失败：'+e.message,'error');
   }
 }
 
@@ -680,24 +763,31 @@ async function loadDataFiles(){
 }
 
 async function loadData(path,evt){
+  const btn=evt?.currentTarget;
+  if(btn?.classList.contains('is-loading')) return;
+  document.querySelectorAll('.data-file-btn').forEach(b=>b.classList.remove('active'));
+  btn?.classList.add('active','is-loading');
   try{
-    document.querySelectorAll('.data-file-btn').forEach(b=>b.classList.remove('active'));
-    evt?.currentTarget?.classList.add('active');
-
     const r=await fetch(`/api/data/${encodeURIComponent(path)}`);
+    if(!r.ok) throw new Error(`读取失败 (${r.status})`);
     const d=await r.json();
     currentData=d.data;
     currentDisplayData=d.display;
     inventoryPage=0;
     renderDataViz(d.display);
     document.getElementById('dataFileLabel').textContent=dataLabel(currentData);
-    document.getElementById('genBtn').disabled=false;
+    const genBtn=document.getElementById('genBtn');
+    genBtn.disabled=false;
+    genBtn.title='';
 
     // 重置引擎区
     resetEngine();
     await restoreRecommendationForDate(currentData);
   }catch(e){
-    alert('加载数据失败: '+e.message);
+    btn?.classList.remove('active');
+    showToast('加载数据失败：'+e.message,'error');
+  }finally{
+    btn?.classList.remove('is-loading');
   }
 }
 
@@ -764,7 +854,8 @@ function renderDataViz(d){
 
   // 天气
   const w=d.weather||{};
-  html+=`<div class="data-section"><div class="data-label"><span>${escapeHtml(w.icon||'🌤️')} 天气</span></div><div style="font-size:12px;color:var(--ink2)">${escapeHtml(w.description||w.condition||'')} · ${escapeHtml(w.temperature||'')}°C</div></div>`;
+  const temperatureText=w.temperature!==undefined&&w.temperature!==null&&w.temperature!==''?` · ${escapeHtml(w.temperature)}°C`:'';
+  html+=`<div class="data-section"><div class="data-label"><span>${escapeHtml(w.icon||'🌤️')} 天气</span></div><div style="font-size:12px;color:var(--ink2)">${escapeHtml(w.description||w.condition||'暂无天气数据')}${temperatureText}</div></div>`;
 
   // 社区
   const c=d.community||{};
@@ -778,11 +869,11 @@ function renderDataViz(d){
 
   // 通勤
   const cm=d.commute||{};
-  html+=`<div class="data-section"><div class="data-label"><span>🚶 通勤节奏</span></div><div style="font-size:12px;color:var(--ink2)">放学 ${escapeHtml(cm.school_dismissal||'')} · 下班 ${escapeHtml(cm.office_offwork||'')}</div></div>`;
+  html+=`<div class="data-section"><div class="data-label"><span>🚶 通勤节奏</span></div><div style="font-size:12px;color:var(--ink2)">放学 ${escapeHtml(cm.school_dismissal||'-')} · 下班 ${escapeHtml(cm.office_offwork||'-')}</div></div>`;
 
   // 客流
   const ft=d.foot_traffic||{};
-  html+=`<div class="data-section"><div class="data-label"><span>📊 预计客流</span></div><div style="font-size:15px;font-weight:700;color:var(--brand-d)">${escapeHtml(ft.estimated||'')}人</div></div>`;
+  html+=`<div class="data-section"><div class="data-label"><span>📊 预计客流</span></div><div style="font-size:15px;font-weight:700;color:var(--brand-d)">${escapeHtml(ft.estimated??'-')}人</div></div>`;
 
   // 热销
   if(d.historical_hot_dishes&&d.historical_hot_dishes.length){
@@ -802,6 +893,7 @@ function resetEngine(){
   document.getElementById('outputBody').innerHTML='';
   document.getElementById('menuOut').style.display='none';
   document.getElementById('engineStatus').textContent='待命';
+  document.getElementById('genBtnText').textContent='生成今日方案';
   document.getElementById('reachCard').style.display='none';
   document.getElementById('valueCard').style.display='none';
 }
@@ -861,6 +953,7 @@ async function restoreRecommendationForDate(data){
     if(response.status===404) return;
     if(!response.ok) throw new Error('读取历史方案失败');
     restoreRecommendation(await response.json());
+    showToast(`已自动恢复 ${planDate} 的已保存方案`,'info',2800);
   }catch(error){
     console.error('restoreRecommendationForDate error:',error);
   }
@@ -1009,6 +1102,17 @@ function updateAgentTraceSummary(){
   const progress=document.getElementById('agentTraceProgress');
   progress.style.width=states.length?`${Math.round((completed+failed)/states.length*100)}%`:'0';
   progress.parentElement.classList.toggle('failed',failed>0);
+}
+
+function safeAssetUrl(value){
+  const raw=String(value??'').trim();
+  if(!raw) return '';
+  try{
+    const url=new URL(raw,window.location.origin);
+    return ['http:','https:'].includes(url.protocol)?url.href:'';
+  }catch(_error){
+    return '';
+  }
 }
 
 function focusRunningAgentNode(flow,nodeEl){
@@ -1419,6 +1523,16 @@ async function generate(){
   document.getElementById('thinkingBadge').textContent='等待思考...';
   document.getElementById('outputBadge').textContent='等待生成';
 
+  // 窄屏或页面已滚走时，把工作流区带回视野
+  requestAnimationFrame(()=>{
+    const engineCard=document.querySelector('.engine-card');
+    const rect=engineCard.getBoundingClientRect();
+    if(rect.top<64||rect.top>window.innerHeight*0.45){
+      const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      engineCard.scrollIntoView({behavior:reduceMotion?'auto':'smooth',block:'start'});
+    }
+  });
+
   let thinkingText='';
   let outputText='';
   let terminalReceived=false;
@@ -1506,6 +1620,7 @@ async function generate(){
             document.getElementById('engineStatus').textContent='错误';
             if(showThinking) document.getElementById('thinkingBadge').textContent='错误';
             document.getElementById('outputBadge').textContent='错误';
+            showToast('生成失败：'+evt.content,'error',5200);
           }
         }catch(e){}
       }
@@ -1520,6 +1635,7 @@ async function generate(){
     document.getElementById('engineStatus').textContent='错误';
     if(showThinking) document.getElementById('thinkingBadge').textContent='错误';
     document.getElementById('outputBadge').textContent='错误';
+    showToast('生成失败：'+e.message,'error',5200);
   }finally{
     generating=false;
     btn.disabled=false;
@@ -1533,15 +1649,27 @@ function renderResult(data){
   const r=data.result;
   // 菜单
   document.getElementById('menuOut').style.display='block';
-  document.getElementById('menuMeta').textContent=`${r.menus.length}道菜 · 点击查看菜谱`;
+  const imageCount=r.menus.filter(menu=>safeAssetUrl(menu.recipe_image_url)).length;
+  document.getElementById('menuMeta').textContent=`${r.menus.length}道菜 · 点击查看菜谱${imageCount?` · ${imageCount}张菜谱图`:''}`;
+  const imagesPageBtn=document.getElementById('recipeImagesPageBtn');
+  if(imagesPageBtn) imagesPageBtn.textContent=imageCount?`🖼️ 查看菜谱图片（${imageCount}）`:'🖼️ 菜谱图片页';
+  const recipeImageSelect=document.getElementById('recipeImageSelect');
+  const previousMenuIndex=Number(recipeImageSelect.value);
+  recipeImageSelect.innerHTML=r.menus.map((menu,index)=>`<option value="${index}">${escapeHtml(menu.dish||`菜品 ${index+1}`)}</option>`).join('');
+  if(Number.isInteger(previousMenuIndex)&&previousMenuIndex>=0&&previousMenuIndex<r.menus.length){
+    recipeImageSelect.value=String(previousMenuIndex);
+  }
+  updateRecipeImageToolbar();
   document.getElementById('menuGrid').innerHTML=r.menus.map((d,i)=>{
+    const imageUrl=safeAssetUrl(d.recipe_image_url);
     return `
-    <div class="dish-card fade-up" style="animation-delay:${i*0.1}s" onclick="openRecipe(${i})">
-      <div class="dish-img">${escapeHtml(d.emoji||'🍳')}</div>
+    <div class="dish-card fade-up" style="animation-delay:${i*0.1}s" role="button" tabindex="0" aria-label="查看${escapeHtml(d.dish||'菜品')}菜谱详情" onclick="openRecipe(${i})" onkeydown="handleCardKey(event,${i})">
+      <div class="dish-img">${escapeHtml((d.emoji||'').trim()||'🍳')}</div>
       <div class="dish-body">
         <div class="dish-name">${escapeHtml(d.dish)}<span class="role">${escapeHtml(d.role)}</span></div>
         <div class="dish-desc">${escapeHtml(d.priority_reason||'')}</div>
-        <div class="dish-price">¥${escapeHtml(d.package_price)}<span class="old">¥${escapeHtml(d.original_price)}</span></div>
+        <div class="dish-price">¥${escapeHtml(d.package_price??'-')}${d.original_price?`<span class="old">¥${escapeHtml(d.original_price)}</span>`:''}</div>
+        <div class="dish-actions"><button type="button" class="recipe-image-btn" data-menu-index="${i}" onclick="generateRecipeImage(${i},this,event)">${imageUrl?'重新生成图片':'生成菜谱图片'}</button>${imageUrl?`<button type="button" class="recipe-image-btn" onclick="openRecipeImagesPage(event)">查看图片</button>`:''}</div>
       </div>
     </div>`;
   }).join('');
@@ -1552,19 +1680,19 @@ function renderResult(data){
   renderValue(r);
 }
 
-function renderPackage(r){
-  document.getElementById('pkgCard').style.display='block';
-  document.getElementById('pkgCard').classList.add('fade-up');
-  let html=`<div class="pkg-main"><div class="pkg-title">${escapeHtml(r.scenario_tag||'')}</div></div>`;
-  html+='<div class="pkg-items">';
-  r.menus.forEach(d=>{
-    html+=`<div class="it"><span>${escapeHtml(d.emoji||'')} ${escapeHtml(d.dish)} (${escapeHtml(d.role)})</span><span>¥${escapeHtml(d.package_price)}</span></div>`;
-  });
-  html+=`</div>`;
-  if(r.cross_sell){
-    html+=`<div style="margin:12px 16px;padding:11px 13px;background:var(--warm-l);border:1px dashed var(--warm);border-radius:10px;font-size:12px">🔗 <b>连带推荐：</b>${escapeHtml(r.cross_sell)}</div>`;
+function handleCardKey(event,idx){
+  if(event.target!==event.currentTarget) return;
+  if(event.key==='Enter'||event.key===' '){
+    event.preventDefault();
+    openRecipe(idx);
   }
-  document.getElementById('pkgBody').innerHTML=html;
+}
+
+/* 菜谱图片统一在独立页面展示与下载 */
+function openRecipeImagesPage(event){
+  event?.preventDefault();
+  event?.stopPropagation();
+  openChannelPage('/recipe-images',currentPlanId);
 }
 
 function renderReach(planId){
@@ -1581,7 +1709,7 @@ function renderReach(planId){
 
 function openChannelPage(path,planId){
   if(!planId){
-    alert('当前方案未保存，请重新生成后再访问。');
+    showToast('当前方案未保存，请重新生成后再访问。','info');
     return;
   }
   window.location.href=`${path}?plan_id=${encodeURIComponent(planId)}`;
@@ -1696,21 +1824,29 @@ function renderValue(r){
 }
 
 /* ============================================================ 菜谱弹窗 ============================================================ */
+let recipeModalLastFocus=null;
 function openRecipe(idx){
   if(!currentResult||!currentResult.menus||!currentResult.menus[idx]) return;
   const d=currentResult.menus[idx];
   const recipe=d.recipe||{};
   const url=recipeUrls[d.dish]||'';
+  const recipeImageUrl=safeAssetUrl(d.recipe_image_url);
+  const overlay=document.getElementById('recipeModal');
+  const wasOpen=overlay.classList.contains('show');
+  if(!wasOpen) recipeModalLastFocus=document.activeElement;
 
-  const ingredients=(d.ingredients||[]).map(ing=>`<tr><td>${escapeHtml(ing.name)}</td><td>${escapeHtml(ing.amount)}</td><td style="font-size:11px;color:var(--ink3)">${escapeHtml(ing.note||'')}</td></tr>`).join('');
-  const steps=(recipe.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
+  const ingredientRows=(d.ingredients||[]).map(ing=>`<tr><td>${escapeHtml(ing.name)}</td><td>${escapeHtml(ing.amount)}</td><td style="font-size:11px;color:var(--ink3)">${escapeHtml(ing.note||'')}</td></tr>`).join('');
+  const stepItems=(recipe.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
+  const ingredientsSection=ingredientRows?`<div class="rm-section"><h4>🥬 食材清单</h4><table class="rm-ingr-table">${ingredientRows}</table></div>`:'';
+  const stepsSection=stepItems?`<div class="rm-section"><h4>👩‍🍳 制作步骤</h4><ol class="rm-steps">${stepItems}</ol></div>`:'';
+  const tipsSection=recipe.tips?`<div class="rm-section"><h4>💡 小贴士</h4><div class="rm-tips">${escapeHtml(recipe.tips)}</div></div>`:'';
+  const emptySection=!ingredientsSection&&!stepsSection?'<div class="rm-section" style="color:var(--ink3);font-size:12.5px">该菜品暂无详细菜谱内容。</div>':'';
 
   document.getElementById('recipeModalInner').innerHTML=`
-    <button class="modal-close" onclick="closeRecipe()">✕</button>
-    <div class="rm-hero"><div class="rm-emoji">${escapeHtml(d.emoji||'🍳')}</div><h2>${escapeHtml(d.dish)}</h2></div>
-    <div class="rm-section"><h4>🥬 食材清单</h4><table class="rm-ingr-table">${ingredients}</table></div>
-    <div class="rm-section"><h4>👩‍🍳 制作步骤</h4><ol class="rm-steps">${steps}</ol></div>
-    <div class="rm-section"><h4>💡 小贴士</h4><div class="rm-tips">${escapeHtml(recipe.tips||'')}</div></div>
+    <button class="modal-close" onclick="closeRecipe()" aria-label="关闭菜谱详情">✕</button>
+    <div class="rm-hero"><div class="rm-emoji">${escapeHtml((d.emoji||'').trim()||'🍳')}</div><h2>${escapeHtml(d.dish)}</h2></div>
+    <div class="rm-image-action"><button type="button" class="recipe-image-btn" data-menu-index="${idx}" onclick="generateRecipeImage(${idx},this,event)">${recipeImageUrl?'重新生成图片':'生成菜谱图片'}</button>${recipeImageUrl?`<button type="button" class="recipe-image-btn" onclick="openRecipeImagesPage(event)">查看 / 下载图片</button>`:''}<span>${recipeImageUrl?'图片已生成，在「菜谱图片」页集中展示与下载':'根据当前菜名、食材和步骤生成专属海报'}</span></div>
+    ${ingredientsSection}${stepsSection}${tipsSection}${emptySection}
     ${url?`<div class="rm-qr"><div class="rm-qr-img" id="qrContainer"></div><div class="rm-qr-info"><h5>📱 扫码查看菜谱</h5><p>手机扫码即可打开云端菜谱页面，可收藏分享</p><div class="rm-qr-url">${escapeHtml(url)}</div></div></div>`:''}
   `;
 
@@ -1730,13 +1866,94 @@ function openRecipe(idx){
     }
   }
 
-  document.getElementById('recipeModal').classList.add('show');
+  overlay.classList.add('show');
   document.body.style.overflow='hidden';
+  if(!wasOpen) document.querySelector('#recipeModalInner .modal-close')?.focus();
+}
+
+function setRecipeImageButtonState(idx,isLoading){
+  document.querySelectorAll(`.recipe-image-btn[data-menu-index="${idx}"]`).forEach(button=>{
+    button.disabled=isLoading;
+    button.classList.toggle('is-loading',isLoading);
+    const hasImage=Boolean(safeAssetUrl(currentResult?.menus?.[idx]?.recipe_image_url));
+    button.textContent=isLoading
+      ?'正在生成...'
+      :button.classList.contains('recipe-image-primary')
+        ?hasImage?'🎨 重新生成所选图片':'🎨 生成所选菜谱图片'
+        :hasImage?'重新生成图片':'生成菜谱图片';
+  });
+}
+
+function updateRecipeImageToolbar(){
+  const select=document.getElementById('recipeImageSelect');
+  const button=document.getElementById('recipeImageToolbarBtn');
+  if(!select||!button) return;
+  const idx=Number(select.value);
+  button.dataset.menuIndex=String(idx);
+  const hasImage=Boolean(safeAssetUrl(currentResult?.menus?.[idx]?.recipe_image_url));
+  button.textContent=hasImage?'🎨 重新生成所选图片':'🎨 生成所选菜谱图片';
+}
+
+function generateSelectedRecipeImage(button,event){
+  const idx=Number(document.getElementById('recipeImageSelect')?.value);
+  if(!Number.isInteger(idx)) return;
+  return generateRecipeImage(idx,button,event);
+}
+
+async function generateRecipeImage(idx,button,event){
+  event?.preventDefault();
+  event?.stopPropagation();
+  if(recipeImageGenerating.has(idx)) return;
+  if(!currentPlanId){
+    showToast('当前方案尚未保存，请先生成完整方案。','info');
+    return;
+  }
+  const dish=currentResult?.menus?.[idx]?.dish;
+  if(!dish){
+    showToast('未找到指定菜品。','error');
+    return;
+  }
+
+  const requestedPlanId=currentPlanId;
+  recipeImageGenerating.add(idx);
+  setRecipeImageButtonState(idx,true);
+  document.getElementById('engineStatus').textContent=`正在生成「${dish}」菜谱图片...`;
+
+  try{
+    const response=await fetch(`/api/recommendations/${encodeURIComponent(requestedPlanId)}/menus/${idx}/image`,{
+      method:'POST',
+      headers:{'Accept':'application/json'}
+    });
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(payload.detail||`图片生成失败（HTTP ${response.status}）`);
+
+    if(currentPlanId===requestedPlanId){
+      currentResult=payload.result;
+      recipeUrls=payload.recipe_urls||recipeUrls;
+      renderResult({plan_id:currentPlanId,result:currentResult});
+      if(document.getElementById('recipeModal').classList.contains('show')){
+        openRecipe(idx);
+      }
+      document.getElementById('engineStatus').textContent=`✅ 「${dish}」菜谱图片已生成`;
+      showToast(`「${dish}」菜谱图片已生成，可在「菜谱图片」页查看下载`,'success');
+    }
+  }catch(error){
+    console.error('generateRecipeImage error:',error);
+    document.getElementById('engineStatus').textContent=`❌ 「${dish}」图片生成失败`;
+    showToast(error.message||'菜谱图片生成失败，请稍后重试。','error');
+  }finally{
+    recipeImageGenerating.delete(idx);
+    setRecipeImageButtonState(idx,false);
+  }
 }
 
 function closeRecipe(){
   document.getElementById('recipeModal').classList.remove('show');
   document.body.style.overflow='';
+  if(recipeModalLastFocus&&document.contains(recipeModalLastFocus)&&typeof recipeModalLastFocus.focus==='function'){
+    recipeModalLastFocus.focus();
+  }
+  recipeModalLastFocus=null;
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRecipe();});

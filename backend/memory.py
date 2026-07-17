@@ -264,6 +264,57 @@ class MemoryStore:
         conn.close()
         return self._recommendation_from_row(row)
 
+    def update_pending_recommendation_menu_image(
+        self,
+        plan_id: str,
+        *,
+        menu_index: int,
+        expected_dish: str,
+        image_url: str,
+    ) -> Optional[dict]:
+        """事务化合并单菜图片，不创建页面或改变决策与 Memory 样例。"""
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            """SELECT output, recipe_urls
+               FROM pending_recommendations WHERE plan_id = ?""",
+            (plan_id,),
+        ).fetchone()
+        if row is None:
+            conn.rollback()
+            conn.close()
+            return None
+
+        output = json.loads(row[0])
+        recipe_urls = json.loads(row[1])
+        menus = output.get("menus")
+        if not isinstance(menus, list) or not 0 <= menu_index < len(menus):
+            conn.rollback()
+            conn.close()
+            raise ValueError("指定菜品不存在")
+        menu = menus[menu_index]
+        dish_name = str(menu.get("dish") or "") if isinstance(menu, dict) else ""
+        if not dish_name or dish_name != expected_dish:
+            conn.rollback()
+            conn.close()
+            raise ValueError("方案已更新，请重新选择要生成图片的菜品")
+
+        menu["recipe_image_url"] = image_url
+        cursor = conn.execute(
+            """UPDATE pending_recommendations
+               SET output = ?
+               WHERE plan_id = ?""",
+            (
+                json.dumps(output, ensure_ascii=False),
+                plan_id,
+            ),
+        )
+        conn.commit()
+        conn.close()
+        if cursor.rowcount != 1:
+            return None
+        return {"result": output, "recipe_urls": recipe_urls}
+
     def list_recommendation_history(self) -> list:
         """按门店和业务日期列出当前保存的推荐方案。"""
         conn = sqlite3.connect(self.db_path)

@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#21342c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>">
 <title>门店负责人决策大屏</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -25,6 +27,8 @@ const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;'
 let activePlan=null;
 let managerFeedback='';
 
+function goBack(){if(history.length>1){history.back();}else{location.href='/';}}
+
 function decisionLabel(decision){return decision==='accepted'?'已接受执行':decision==='rejected'?'已拒绝执行':'待负责人确认';}
 function mapLabel(value,fallback){return escapeHtml(value||fallback);}
 function estimateText(metric,key){if(!metric||typeof metric!=='object')return metric||'-';const value=metric.value;if(typeof value!=='number'||!Number.isFinite(value))return '-';const formatted=value.toLocaleString('zh-CN',{maximumFractionDigits:1});if(metric.unit==='元'||metric.unit==='CNY')return `¥${formatted}`;if(metric.unit==='%')return `${key==='ticket_lift'&&value>0?'+':''}${formatted}%`;return `${formatted}${metric.unit||''}`;}
@@ -46,9 +50,18 @@ function renderDashboard(plan){
 
 function showDecisionMessage(decision,memoryCaseId,existing=false){const accepted=decision==='accepted';document.getElementById('decisionMessage').innerHTML=`<div class="message ${accepted?'ok':'no'}">${accepted?'已接受并下发执行，已写入成功 Memory 样例':'已拒绝当前方案，已写入失败 Memory 样例'}${memoryCaseId?`（#${memoryCaseId}）`:''}${existing?'。':''}</div>`;}
 async function submitDecision(accepted){
-  if(!activePlan)return;document.querySelectorAll('.decision-actions button').forEach(button=>button.disabled=true);
+  if(!activePlan)return;
+  const confirmText=accepted
+    ?'确认接受并下发执行该方案？\n\n接受后将写入成功 Memory 样例，决策不可再变更。'
+    :'确认拒绝当前方案？\n\n拒绝后将写入失败 Memory 样例，决策不可再变更。';
+  if(!confirm(confirmText))return;
+  const buttons=document.querySelectorAll('.decision-actions button');
+  buttons.forEach(button=>button.disabled=true);
+  const activeButton=document.querySelector(accepted?'.accept':'.reject');
+  const originalText=activeButton?activeButton.textContent:'';
+  if(activeButton)activeButton.textContent='提交中...';
   try{const response=await fetch(`/api/recommendations/${encodeURIComponent(planId)}/decision`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accepted})});if(!response.ok)throw new Error('提交决策失败');const outcome=await response.json();activePlan.decision=outcome.decision;activePlan.memory_case_id=outcome.memory_case_id;renderDashboard(activePlan);showDecisionMessage(outcome.decision,outcome.memory_case_id,outcome.already_decided);}
-  catch(error){document.querySelectorAll('.decision-actions button').forEach(button=>button.disabled=false);document.getElementById('decisionMessage').innerHTML=`<div class="message no">${escapeHtml(error.message)}，请重试。</div>`;}
+  catch(error){buttons.forEach(button=>button.disabled=false);if(activeButton)activeButton.textContent=originalText;document.getElementById('decisionMessage').innerHTML=`<div class="message no">${escapeHtml(error.message)}，请重试。</div>`;}
 }
 async function init(){if(!planId){document.getElementById('dashboard').innerHTML='<div class="error">缺少推荐方案，请从运营驾驶舱进入。</div>';return;}try{const response=await fetch(`/api/recommendations/${encodeURIComponent(planId)}`);if(!response.ok)throw new Error('方案不存在');renderDashboard(await response.json());setTimeout(fitMetrics,50);}catch(error){document.getElementById('dashboard').innerHTML=`<div class="error">${escapeHtml(error.message)}，请返回运营驾驶舱重新生成。</div>`;}}
 function fitMetrics(){document.querySelectorAll('.metric strong').forEach(function(el){var fs=parseInt(getComputedStyle(el).fontSize)||14;while(el.scrollHeight>el.clientHeight&&fs>9){fs-=0.5;el.style.fontSize=fs+'px';}});}

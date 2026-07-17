@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f4512a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
 <title>Dmall 会员 App · 今日推送</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -30,6 +32,7 @@ button{font:inherit;cursor:pointer;border:0}.page{max-width:460px;min-height:100
 const planId=new URLSearchParams(location.search).get('plan_id');
 const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 const decisionText=decision=>decision==='accepted'?'该方案已由门店负责人接受，正在执行。':decision==='rejected'?'该方案未被门店负责人接受，本次推送暂不下发。':'该推送待门店负责人确认后下发。';
+function goBack(){if(history.length>1){history.back();}else{location.href='/';}}
 
 function renderPage(plan){
   const result=plan.result||{};
@@ -41,7 +44,7 @@ function renderPage(plan){
     <h2 class="section-title">今晚推荐组合</h2><section class="menu-list">${menus||'<div class="error">暂无可展示的菜品组合</div>'}</section>
     <div class="benefit"><i>⚡</i><span>新鲜食材按需配齐，减少挑选时间，把今天的晚餐交给多点。</span></div>
     <div class="status ${state}">${decisionText(plan.decision)}</div>
-    <button class="back" onclick="history.back()">返回运营驾驶舱</button>`;
+    <button class="back" onclick="goBack()">返回运营驾驶舱</button>`;
 }
 
 async function init(){

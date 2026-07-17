@@ -13,7 +13,7 @@
 - `backend/llm_engine.py` 编排 Memory 检索、提示词、流式 LLM、JSON 解析、菜谱 HTML 部署和当前方案保存。
 - `backend/agent.py` 负责有界多步经营数据流程；`backend/mcp_client.py` 只实现受限 MCP 客户端。共享开发数据库、种子数据和 MCP 服务端代码固定放在 `.tmp/AIFreshFoodAssistant-mcp-dev/`，不得混入应用运行包；该目录中的源码、锁文件和确定性 SQLite fixture 需要纳入版本控制，本地 `.venv` 与缓存除外。
 - `backend/skills.py` 定义模型输出契约。变更输出字段时，同步修改提示词、Mock 结果、解析逻辑和前端渲染。
-- `frontend/` 是独立的原生 HTML/CSS/JavaScript 页面，不是 React 项目。页面通过 `fetch` 调用 API，Dmall 与决策大屏从 `plan_id` 查询参数读取方案。
+- `frontend/` 是独立的原生 HTML/CSS/JavaScript 页面，不是 React 项目。页面通过 `fetch` 调用 API，Dmall、决策大屏与菜谱图片页从 `plan_id` 查询参数读取方案。
 
 ## 数据不变量
 
@@ -31,6 +31,8 @@
 - CSV 默认使用“CSV导入门店”和“今日”，未经上下文增强的连续 CSV 生成会覆盖同一份方案。
 - 启动迁移只从旧 `input_context.store_info` 无损回填门店和日期；不要对缺失日期的记录做猜测性迁移。
 - `DELETE /api/recommendations/history` 只允许清空 `pending_recommendations`，不得删除 `memory_cases` 或 `recipes/`。
+- 单菜图片接口 `POST /api/recommendations/{plan_id}/menus/{menu_index}/image` 只保存图片并更新指定菜单的 `recipe_image_url` 与方案 `output`；不得创建 HTML、改写 `recipe_urls`、重置方案决策或重复写入 `memory_cases`，同一方案的并发图片更新必须避免相互覆盖。
+- 默认 `IMAGE_AUTO_GENERATION_ENABLED=false`：完整方案生成不得自动调用图片模型；图片生成只能由用户通过指定菜品按钮手动触发。该开关不得影响单菜图片接口的可用性。
 - MCP 模式生成时，归一化后的库存、销售摘要、价格和 `operational_data` 必须写入方案的 `input_context`，保证方案可复现；`transport=mcp` 与服务端 `source` 标签都要保留，不得只保存上传文件中的旧库存或把开发假数据表述为生产数据。
 - `MCP_REQUIRED=true` 时，工具发现、库存、销售或价格任一步失败都必须在保存方案前终止，禁止静默回退。
 - MCP 严格模式必须规范化商品 ID 和数值，逐行校验 `sales_date`，要求销售/价格同为 `CNY`，并将 `source` 限制为短不透明标识；畸形行、跨作用域商品、缺失价格或混合币种均不得落库。

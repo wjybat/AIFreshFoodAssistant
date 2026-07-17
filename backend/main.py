@@ -10,6 +10,7 @@ API 端点:
   GET  /api/data/{filename} → 加载数据文件
   POST /api/generate        → SSE 流式生成（LLM Agentic Workflow）
     GET  /api/recommendations/{plan_id}          → 获取待确认方案
+    POST /api/recommendations/{plan_id}/menus/{menu_index}/image → 生成指定菜图片
     POST /api/recommendations/{plan_id}/decision → 负责人接受或拒绝方案
   GET  /api/memory/cases    → 列出 Memory 中的历史样例
   GET  /recipes/{filename}  → 已部署的菜谱页面
@@ -26,6 +27,7 @@ from typing import Optional
 from .config import config
 from .memory import MemoryStore
 from .llm_engine import LLMEngine
+from .image_engine import RecipeImageError
 from .data_loader import load_json, load_csv, list_data_files, format_for_display
 
 # ==================== 初始化 ====================
@@ -102,6 +104,15 @@ async def recommendation_history():
     return FileResponse(str(page_path))
 
 
+@app.get("/recipe-images")
+async def recipe_images():
+    """菜谱图片展示与下载页"""
+    page_path = config.FRONTEND_DIR / "recipe-images.html"
+    if not page_path.exists():
+        raise HTTPException(404, "前端文件未找到")
+    return FileResponse(str(page_path))
+
+
 @app.get("/api/health")
 async def health():
     """健康检查"""
@@ -112,6 +123,10 @@ async def health():
         "llm_model": config.LLM_MODEL,
         "llm_base_url": config.LLM_BASE_URL,
         "llm_provider": config.resolved_llm_provider,
+        "image_generation_enabled": config.IMAGE_GENERATION_ENABLED,
+        "image_auto_generation_enabled": config.IMAGE_AUTO_GENERATION_ENABLED,
+        "image_generation_required": config.IMAGE_GENERATION_REQUIRED,
+        "image_model": config.IMAGE_MODEL,
         "agent_enabled": True,
         "mcp_enabled": config.MCP_ENABLED,
         "mcp_required": config.MCP_REQUIRED,
@@ -212,6 +227,19 @@ async def clear_recommendation_history():
         "message": f"已清空 {deleted} 条保存的推荐方案",
         "deleted": deleted,
     }
+
+
+@app.post("/api/recommendations/{plan_id}/menus/{menu_index}/image")
+async def generate_recommendation_menu_image(plan_id: str, menu_index: int):
+    """为已保存方案中的指定菜品生成并持久化菜谱海报。"""
+    try:
+        return await llm_engine.generate_recipe_image(plan_id, menu_index)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RecipeImageError as exc:
+        raise HTTPException(502, str(exc)) from exc
 
 
 @app.get("/api/recommendations/{plan_id}")
